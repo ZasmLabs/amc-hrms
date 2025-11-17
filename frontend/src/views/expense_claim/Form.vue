@@ -35,14 +35,6 @@
 						@deleteExpenseTax="deleteExpenseTax"
 					/>
 				</template>
-
-				<template #advances="{ isFormReadOnly }">
-					<ExpenseAdvancesTable
-						v-model:expenseClaim="expenseClaim"
-						:currency="currency"
-						:isReadOnly="isReadOnly || isFormReadOnly"
-					/>
-				</template>
 			</FormView>
 		</ion-content>
 	</ion-page>
@@ -56,7 +48,6 @@ import { computed, ref, watch, inject } from "vue"
 import FormView from "@/components/FormView.vue"
 import ExpensesTable from "@/components/ExpensesTable.vue"
 import ExpenseTaxesTable from "@/components/ExpenseTaxesTable.vue"
-import ExpenseAdvancesTable from "@/components/ExpenseAdvancesTable.vue"
 
 import { getCompanyCurrency } from "@/data/currencies"
 
@@ -79,7 +70,6 @@ const props = defineProps({
 
 const tabs = [
 	{ name: "Expenses", lastField: "taxes" },
-	{ name: "Advances", lastField: "advances" },
 	{ name: "Totals", lastField: "cost_center" },
 ]
 

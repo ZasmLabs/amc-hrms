@@ -28,22 +28,6 @@
 						listButtonRoute="ExpenseClaimListView"
 					/>
 				</div>
-
-				<div>
-					<div class="flex flex-row justify-between items-center">
-						<div class="text-lg text-gray-800 font-bold">
-							{{ __("Employee Advance Balance") }}
-						</div>
-						<router-link
-							:to="{ name: 'EmployeeAdvanceListView' }"
-							class="text-sm text-gray-800 font-semibold cursor-pointer underline underline-offset-2"
-						>
-							{{ __("View List") }}
-						</router-link>
-					</div>
-
-					<EmployeeAdvanceBalance :items="advanceBalance.data" />
-				</div>
 			</div>
 		</template>
 	</BaseLayout>
@@ -56,8 +40,6 @@ import BaseLayout from "@/components/BaseLayout.vue"
 import ExpenseClaimSummary from "@/components/ExpenseClaimSummary.vue"
 import RequestList from "@/components/RequestList.vue"
 import ExpenseClaimItem from "@/components/ExpenseClaimItem.vue"
-import EmployeeAdvanceBalance from "@/components/EmployeeAdvanceBalance.vue"
 
 import { myClaims } from "@/data/claims"
-import { advanceBalance } from "@/data/advances"
 </script>
