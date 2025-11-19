@@ -20,6 +20,7 @@ import RequestPanel from "@/components/RequestPanel.vue"
 import AttendanceIcon from "@/components/icons/AttendanceIcon.vue"
 import LeaveIcon from "@/components/icons/LeaveIcon.vue"
 import ExpenseIcon from "@/components/icons/ExpenseIcon.vue"
+import ServiceCallIcon from "@/components/icons/ServiceCallIcon.vue"
 
 const __ = inject("$translate")
 
@@ -38,6 +39,14 @@ const quickLinks = [
 		icon: markRaw(ExpenseIcon),
 		title: __("Claim an Expense"),
 		route: "ExpenseClaimFormView",
+	},
+	{
+		icon: markRaw(ServiceCallIcon),
+		title: __("Service Call"),
+		route: {
+			name: "ServiceCallListView",
+			query: { tab: "My Assignments" },
+		},
 	},
 ]
 </script>

@@ -151,6 +151,7 @@ import ShiftAssignmentItem from "@/components/ShiftAssignmentItem.vue"
 import LeaveRequestItem from "@/components/LeaveRequestItem.vue"
 import ExpenseClaimItem from "@/components/ExpenseClaimItem.vue"
 import EmployeeAdvanceItem from "@/components/EmployeeAdvanceItem.vue"
+import ServiceCallItem from "@/components/ServiceCallItem.vue"
 import ListFiltersActionSheet from "@/components/ListFiltersActionSheet.vue"
 import CustomIonModal from "@/components/CustomIonModal.vue"
 import RequestActionSheet from "@/components/RequestActionSheet.vue"
@@ -197,6 +198,7 @@ const listItemComponent = {
 	"Leave Application": markRaw(LeaveRequestItem),
 	"Expense Claim": markRaw(ExpenseClaimItem),
 	"Employee Advance": markRaw(EmployeeAdvanceItem),
+	"Service Call": markRaw(ServiceCallItem),
 }
 
 const router = useRouter()
@@ -237,6 +239,11 @@ const detailViewRoute = computed(() => {
 
 const defaultFilters = computed(() => {
 	const filters = []
+
+	// Service Call doesn't have employee field, skip default filtering
+	if (props.doctype === "Service Call") {
+		return filters
+	}
 
 	if (isTeamRequest.value) {
 		filters.push([props.doctype, "employee", "!=", employee.data.name])

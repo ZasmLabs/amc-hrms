@@ -7,7 +7,7 @@
 				:class="link !== props.items[props.items.length - 1] && 'border-b'"
 				v-for="link in props.items"
 				:key="link.title"
-				:to="{ name: link.route }"
+				:to="typeof link.route === 'string' ? { name: link.route } : link.route"
 			>
 				<div class="flex flex-row items-center gap-3 grow">
 					<component :is="link.icon" class="h-5 w-5 text-gray-500" />

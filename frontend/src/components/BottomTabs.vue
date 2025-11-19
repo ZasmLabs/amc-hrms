@@ -29,8 +29,8 @@ import { IonTabBar, IonTabButton, IonLabel } from "@ionic/vue"
 import HomeIcon from "@/components/icons/HomeIcon.vue"
 import LeaveIcon from "@/components/icons/LeaveIcon.vue"
 import ExpenseIcon from "@/components/icons/ExpenseIcon.vue"
-import SalaryIcon from "@/components/icons/SalaryIcon.vue"
 import AttendanceIcon from "@/components/icons/AttendanceIcon.vue"
+import ServiceCallIcon from "@/components/icons/ServiceCallIcon.vue"
 import { inject } from "vue"
 
 const __ = inject("$translate")
@@ -59,9 +59,9 @@ const tabItems = [
 		route: "/dashboard/expense-claims",
 	},
 	{
-		icon: SalaryIcon,
-		title: __("Salary"),
-		route: "/dashboard/salary-slips",
+		icon: ServiceCallIcon,
+		title: __("Service Call"),
+		route: "/dashboard/service-calls",
 	},
 ]
 </script>

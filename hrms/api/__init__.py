@@ -804,6 +804,171 @@ def get_allowed_states_for_workflow(workflow: dict, user_id: str) -> list[str]:
 	return [transition.state for transition in workflow.transitions if transition.allowed in user_roles]
 
 
+# Service Call
+@frappe.whitelist()
+def get_service_calls(
+	employee: str | None = None,
+	technician: bool = False,
+	for_approval: bool = False,
+	limit: int | None = None,
+) -> list[dict]:
+	"""
+	Get Service Calls
+	- If technician=True, returns Service Calls assigned to the employee in technician_list
+	- If for_approval=True, returns Service Calls pending approval based on workflow
+	- Otherwise returns all Service Calls the user has access to
+	"""
+	filters = frappe._dict()
+	
+	if technician and employee:
+		# Get Service Calls where employee is in technician_list
+		service_calls_with_technician = frappe.get_all(
+			"Technician List",
+			filters={"employee": employee},
+			fields=["parent"],
+			pluck="parent",
+		)
+		filters.name = ("in", service_calls_with_technician) if service_calls_with_technician else ("=", None)
+	elif employee:
+		# For now, if employee is provided but not as technician, return empty
+		# This can be extended based on business logic
+		filters.name = ("=", None)
+	
+	if for_approval:
+		filters.docstatus = 0
+		if workflow := get_workflow("Service Call"):
+			allowed_states = get_allowed_states_for_workflow(workflow, frappe.session.user)
+			if allowed_states:
+				filters[workflow.workflow_state_field] = ("in", allowed_states)
+	else:
+		filters.docstatus = ("!=", 2)
+	
+	fields = [
+		"name",
+		"date",
+		"customer",
+		"contacted_person",
+		"mobile_no",
+		"type",
+		"address",
+		"special_instruction",
+		"service_date",
+		"model_no",
+		"idu_serial",
+		"odu_serial",
+		"service_description",
+		"spare_part",
+		"contact_person",
+		"feedback",
+		"creation",
+		"modified",
+		"docstatus",
+	]
+	
+	if workflow_state_field := get_workflow_state_field("Service Call"):
+		fields.append(workflow_state_field)
+	
+	service_calls = frappe.get_list(
+		"Service Call",
+		fields=fields,
+		filters=filters,
+		order_by="creation desc",
+		limit=limit,
+	)
+	
+	if workflow_state_field:
+		for call in service_calls:
+			call["workflow_state_field"] = workflow_state_field
+	
+	# Get technician details for each service call
+	for call in service_calls:
+		technicians = frappe.get_all(
+			"Technician List",
+			filters={"parent": call.name},
+			fields=["employee", "employee_name", "designation", "department", "data_jghu as mobile", "date"],
+		)
+		call["technicians"] = technicians
+	
+	return service_calls
+
+
+@frappe.whitelist()
+def get_service_call_summary(employee: str | None = None, technician: bool = False) -> dict:
+	"""
+	Get summary statistics for Service Calls
+	"""
+	from frappe.query_builder.functions import Count
+	
+	ServiceCall = frappe.qb.DocType("Service Call")
+	
+	filters = {}
+	if technician and employee:
+		service_calls_with_technician = frappe.get_all(
+			"Technician List",
+			filters={"employee": employee},
+			fields=["parent"],
+			pluck="parent",
+		)
+		if service_calls_with_technician:
+			filters["name"] = ("in", service_calls_with_technician)
+		else:
+			return {
+				"total": 0,
+				"open": 0,
+				"assigned": 0,
+				"on_site": 0,
+				"closed": 0,
+			}
+	elif not technician and not employee:
+		# If no filters, get all service calls user has access to
+		pass
+	
+	# Get workflow state field if exists
+	workflow_state_field = get_workflow_state_field("Service Call")
+	
+	query = frappe.qb.from_(ServiceCall).where(ServiceCall.docstatus != 2)
+	
+	if filters:
+		for key, value in filters.items():
+			if isinstance(value, tuple):
+				if value[0] == "in":
+					query = query.where(ServiceCall[key].isin(value[1]))
+				else:
+					query = query.where(ServiceCall[key] == value[1])
+			else:
+				query = query.where(ServiceCall[key] == value)
+	
+	try:
+		total_result = query.select(Count(ServiceCall.name)).run()
+		total = total_result[0][0] if total_result else 0
+	except Exception:
+		total = 0
+	
+	# Get counts by workflow state
+	summary = {"total": total, "open": 0, "assigned": 0, "on_site": 0, "closed": 0}
+	
+	if workflow_state_field:
+		states_query = query.select(
+			ServiceCall[workflow_state_field].as_("state"),
+			Count(ServiceCall.name).as_("count"),
+		).groupby(ServiceCall[workflow_state_field])
+		
+		state_counts = states_query.run(as_dict=True)
+		for state_data in state_counts:
+			state = state_data.state or "Open"
+			count = state_data.count
+			if state in ["Open"]:
+				summary["open"] = count
+			elif state in ["Assigned", "Accepted"]:
+				summary["assigned"] = summary.get("assigned", 0) + count
+			elif state in ["On Site", "Spare needed"]:
+				summary["on_site"] = summary.get("on_site", 0) + count
+			elif state in ["Close"]:
+				summary["closed"] = count
+	
+	return summary
+
+
 # Permissions
 @frappe.whitelist()
 def get_permitted_fields_for_write(doctype: str) -> list[str]:
