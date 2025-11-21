@@ -4,7 +4,7 @@
 		class="bg-white shadow-md sm:w-96 py-2 pb-2 standalone:pb-safe-bottom"
 	>
 		<ion-tab-button
-			v-for="item in tabItems"
+			v-for="item in filteredTabItems"
 			:key="item.title"
 			:tab="item.title"
 			:href="item.route"
@@ -23,6 +23,7 @@
 
 <script setup>
 import { useRoute } from "vue-router"
+import { computed, inject } from "vue"
 
 import { IonTabBar, IonTabButton, IonLabel } from "@ionic/vue"
 
@@ -31,13 +32,13 @@ import LeaveIcon from "@/components/icons/LeaveIcon.vue"
 import ExpenseIcon from "@/components/icons/ExpenseIcon.vue"
 import AttendanceIcon from "@/components/icons/AttendanceIcon.vue"
 import ServiceCallIcon from "@/components/icons/ServiceCallIcon.vue"
-import { inject } from "vue"
 
 const __ = inject("$translate")
+const user = inject("$user")
 
 const route = useRoute()
 
-const tabItems = [
+const allTabItems = [
 	{
 		icon: HomeIcon,
 		title: __("Home"),
@@ -62,6 +63,35 @@ const tabItems = [
 		icon: ServiceCallIcon,
 		title: __("Service Call"),
 		route: "/dashboard/service-calls",
+		isServiceCall: true,
 	},
 ]
+
+// Filter tabs based on user roles
+// Hide Service Call tab if user has "Technician" role but NOT "Service Manager" role
+const filteredTabItems = computed(() => {
+	// If user data is still loading, show all tabs
+	if (user?.loading || !user?.data) {
+		return allTabItems
+	}
+
+	const userRoles = Array.isArray(user.data?.roles) ? user.data.roles : []
+
+	// Default behavior: show all tabs (including Service Call)
+	// Hide Service Call tab ONLY if user has "Technician" role AND does NOT have "Service Manager" role
+	const hasTechnicianRole = userRoles.includes("Technician")
+	const hasServiceManagerRole = userRoles.includes("Service Manager")
+
+	return allTabItems.filter((item) => {
+		// If it's the Service Call tab, check role restrictions
+		if (item.isServiceCall) {
+			// Hide only if user has Technician role but NOT Service Manager role
+			if (hasTechnicianRole && !hasServiceManagerRole) {
+				return false
+			}
+		}
+		// Show all other tabs
+		return true
+	})
+})
 </script>
