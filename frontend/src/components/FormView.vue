@@ -130,24 +130,32 @@
 				</template>
 
 				<div class="flex flex-col space-y-4 p-4" v-else>
-					<FormField
-						v-for="field in props.fields"
-						:key="field.name"
-						:fieldtype="field.fieldtype"
-						:fieldname="field.fieldname"
-						v-model="formModel[field.fieldname]"
-						:default="field.default"
-						:label="__(field.label, null, props.doctype)"
-						:options="field.options"
-						:linkFilters="field.linkFilters"
-						:documentList="field.documentList"
-						:readOnly="isFieldReadOnly(field)"
-						:reqd="Boolean(field.reqd)"
-						:hidden="Boolean(field.hidden)"
-						:errorMessage="field.error_message"
-						:minDate="field.minDate"
-						:maxDate="field.maxDate"
-					/>
+					<template v-for="field in props.fields" :key="field.fieldname">
+						<!-- Custom slot handling for Table fields (e.g. technician_list) -->
+						<slot
+							v-if="field.fieldtype == 'Table'"
+							:name="field.fieldname"
+							:isFormReadOnly="isFormReadOnly"
+						></slot>
+
+						<FormField
+							v-else
+							:fieldtype="field.fieldtype"
+							:fieldname="field.fieldname"
+							v-model="formModel[field.fieldname]"
+							:default="field.default"
+							:label="__(field.label, null, props.doctype)"
+							:options="field.options"
+							:linkFilters="field.linkFilters"
+							:documentList="field.documentList"
+							:readOnly="isFieldReadOnly(field)"
+							:reqd="Boolean(field.reqd)"
+							:hidden="Boolean(field.hidden)"
+							:errorMessage="field.error_message"
+							:minDate="field.minDate"
+							:maxDate="field.maxDate"
+						/>
+					</template>
 
 					<!-- Attachment upload -->
 					<div
@@ -435,6 +443,29 @@ watch(
 	{ immediate: true }
 )
 
+// Watch for workflow state changes and reset form to ensure Actions button appears
+// This is especially important when workflow actions reveal new fields
+watch(
+	() => {
+		if (!workflow.value || !documentResource.doc) return null
+		const stateField = workflow.value.getWorkflowStateField()
+		return stateField ? documentResource.doc[stateField] : null
+	},
+	async (newState, oldState) => {
+		// If workflow state changed (e.g., after Accept Call), reload and reset form
+		if (newState && oldState && newState !== oldState && props.id) {
+			// Mark as updating to prevent dirty flag
+			isFormUpdated.value = true
+			await documentResource.reload()
+			resetForm()
+			await nextTick()
+			isFormDirty.value = false
+			await nextTick()
+			isFormUpdated.value = false
+		}
+	}
+)
+
 const tabFields = computed(() => {
 	let fieldsByTab = {}
 	let fieldList = []
@@ -682,6 +713,11 @@ function saveForm() {
 	}
 }
 
+// Expose methods for parent components (e.g. Service Call Form) to trigger saves
+defineExpose({
+	saveForm,
+})
+
 function submitOrCancelForm() {
 	if (isFormDirty.value) return
 
@@ -699,16 +735,31 @@ function handleDocDelete() {
 }
 
 async function reloadDoc() {
+	// Mark as updating to prevent watcher from marking as dirty during reload
+	isFormUpdated.value = true
 	await documentResource.reload()
 	resetForm()
+	// Ensure form is marked as clean after reload, especially after workflow actions
+	await nextTick()
+	isFormDirty.value = false
+	// Keep isFormUpdated true for one more tick to ensure watcher doesn't trigger
+	await nextTick()
+	isFormUpdated.value = false
 }
 
 function resetForm() {
-	formModel.value = { ...documentResource.doc }
-	nextTick(() => {
-		isFormDirty.value = false
+	if (documentResource.doc) {
+		formModel.value = { ...documentResource.doc }
+		// Mark as updated immediately to prevent watcher from marking as dirty
 		isFormUpdated.value = true
-	})
+		nextTick(() => {
+			isFormDirty.value = false
+			// Reset the updated flag after a tick so future changes are detected
+			nextTick(() => {
+				isFormUpdated.value = false
+			})
+		})
+	}
 }
 
 async function setFormattedCurrency() {

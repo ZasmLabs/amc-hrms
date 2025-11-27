@@ -93,6 +93,36 @@
 			:disabled="isReadOnly"
 		/>
 
+		<!-- Rating field -->
+		<div v-else-if="props.fieldtype === 'Rating'" class="flex flex-row items-center gap-1">
+			<button
+				v-for="star in 5"
+				:key="star"
+				type="button"
+				class="p-1"
+				:disabled="isReadOnly"
+				@click="!isReadOnly && setRating(star)"
+			>
+				<FeatherIcon
+					:name="star <= (modelValue || 0) ? 'star' : 'star'"
+					class="w-5 h-5"
+					:class="star <= (modelValue || 0) ? 'text-yellow-400' : 'text-gray-300'"
+				/>
+			</button>
+		</div>
+
+		<!-- Signature field (simple text-based signature area) -->
+		<Input
+			v-else-if="props.fieldtype === 'Signature'"
+			type="text"
+			:value="modelValue"
+			:placeholder="__('Sign here')"
+			@input="(v) => emit('update:modelValue', v)"
+			@change="(v) => emit('change', v)"
+			v-bind="$attrs"
+			:disabled="isReadOnly"
+		/>
+
 		<!-- Section Break -->
 		<div
 			v-else-if="props.fieldtype === 'Section Break'"
@@ -140,7 +170,7 @@
 </template>
 
 <script setup>
-import { Autocomplete, DateTimePicker, ErrorMessage, Input } from "frappe-ui"
+import { Autocomplete, DateTimePicker, ErrorMessage, Input, FeatherIcon } from "frappe-ui"
 import { computed, onMounted, inject } from "vue"
 
 import Link from "@/components/Link.vue"
@@ -228,4 +258,8 @@ function setDefaultValue() {
 onMounted(() => {
 	setDefaultValue()
 })
+
+function setRating(star) {
+	emit("update:modelValue", star)
+}
 </script>

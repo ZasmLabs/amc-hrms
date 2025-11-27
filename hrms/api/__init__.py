@@ -24,6 +24,8 @@ SUPPORTED_FIELD_TYPES = [
 	"Time",
 	"Datetime",
 	"Currency",
+	"Signature",
+	"Rating",
 ]
 
 
@@ -828,7 +830,12 @@ def get_service_calls(
 			fields=["parent"],
 			pluck="parent",
 		)
-		filters.name = ("in", service_calls_with_technician) if service_calls_with_technician else ("=", None)
+		
+		if service_calls_with_technician:
+			filters.name = ("in", service_calls_with_technician)
+		else:
+			# If no service calls found, return empty list by using impossible filter
+			filters.name = ("=", "__NO_SERVICE_CALLS__")
 	elif employee:
 		# For now, if employee is provided but not as technician, return empty
 		# This can be extended based on business logic
@@ -888,6 +895,25 @@ def get_service_calls(
 			fields=["employee", "employee_name", "designation", "department", "data_jghu as mobile", "date"],
 		)
 		call["technicians"] = technicians
+	
+	# If filtering by technician, ensure we only return service calls where:
+	# 1. The employee is actually in the technicians array
+	# 2. The technicians array is not empty
+	if technician and employee:
+		filtered_calls = []
+		for call in service_calls:
+			# Check if this service call has the employee in technicians
+			has_employee = False
+			if call.get("technicians") and len(call["technicians"]) > 0:
+				for tech in call["technicians"]:
+					if tech.get("employee") == employee:
+						has_employee = True
+						break
+			
+			if has_employee:
+				filtered_calls.append(call)
+		
+		return filtered_calls
 	
 	return service_calls
 

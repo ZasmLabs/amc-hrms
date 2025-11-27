@@ -5,6 +5,11 @@ const routes = [
 		component: () => import("@/views/service_call/List.vue"),
 	},
 	{
+		name: "ServiceCallMyAssignmentsView",
+		path: "/service-calls/my-assignments",
+		component: () => import("@/views/service_call/MyAssignments.vue"),
+	},
+	{
 		name: "ServiceCallFormView",
 		path: "/service-calls/new",
 		component: () => import("@/views/service_call/Form.vue"),

@@ -73,7 +73,11 @@ const __ = inject("$translate")
 
 const getTransitions = async () => {
 	const transitions = await props.workflow.getTransitions(props.doc)
-	actions.value = transitions.map((transition) => {
+
+	// Deduplicate transitions (e.g. duplicate "Assign Technician")
+	const uniqueTransitions = [...new Set(transitions)]
+
+	actions.value = uniqueTransitions.map((transition) => {
 		let role = ""
 		let theme = "gray"
 		let variant = "subtle"

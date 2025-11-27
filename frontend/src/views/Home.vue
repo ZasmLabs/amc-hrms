@@ -43,10 +43,7 @@ const quickLinks = [
 	{
 		icon: markRaw(ServiceCallIcon),
 		title: __("Service Call"),
-		route: {
-			name: "ServiceCallListView",
-			query: { tab: "My Assignments" },
-		},
+		route: "ServiceCallMyAssignmentsView",
 	},
 ]
 </script>

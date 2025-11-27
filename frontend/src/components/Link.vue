@@ -50,20 +50,55 @@ const value = computed({
 
 const options = createResource({
 	url: "frappe.desk.search.search_link",
-	params: {
-		doctype: props.doctype,
-		txt: searchText.value,
-		filters: props.filters,
-	},
+	params: computed(() => {
+		console.log("[Link Component] Options params computed:", {
+			doctype: props.doctype,
+			txt: searchText.value,
+			filters: props.filters,
+		})
+		return {
+			doctype: props.doctype,
+			txt: searchText.value,
+			filters: props.filters,
+		}
+	}),
 	method: "POST",
 	transform: (data) => {
+		console.log("[Link Component] Transform data:", data)
 		return data.map((doc) => {
-			const title = doc?.description?.split(",")?.[0]
+			// Extract title from description (first part before comma) or use label if available
+			const title = doc?.label || doc?.description?.split(",")?.[0]?.trim()
+			
+			// For Customer List, format as "CUST-0001 : [Customer Name]"
+			if (props.doctype === "Customer List" && title) {
+				return {
+					label: `${doc.value} : ${title}`,
+					value: doc.value,
+				}
+			}
+			
+			// For Customer Branch, format as "CB-001 : [Actual Branch Name]"
+			if (props.doctype === "Customer Branch") {
+				// Use label (which contains the branch name from title_field) or description, fallback to value
+				const branchName = doc?.label || doc?.description?.split(",")?.[0]?.trim() || doc.value
+				return {
+					label: `${doc.value} : ${branchName}`,
+					value: doc.value,
+				}
+			}
+			
+			// For other doctypes, use default format
 			return {
 				label: title ? `${title} : ${doc.value}` : doc.value,
 				value: doc.value,
 			}
 		})
+	},
+	onSuccess(data) {
+		console.log("[Link Component] Options loaded successfully:", data)
+	},
+	onError(error) {
+		console.error("[Link Component] Options error:", error)
 	},
 })
 
@@ -95,5 +130,18 @@ watch(
 		reloadOptions(props.modelValue)
 	},
 	{ immediate: true }
+)
+
+// Watch for filter changes and reload options
+watch(
+	() => props.filters,
+	(newFilters, oldFilters) => {
+		// Only reload if filters actually changed
+		if (JSON.stringify(newFilters) !== JSON.stringify(oldFilters)) {
+			console.log("[Link Component] Filters changed, reloading options:", { newFilters, oldFilters })
+			reloadOptions(searchText.value || props.modelValue || "")
+		}
+	},
+	{ deep: true }
 )
 </script>
