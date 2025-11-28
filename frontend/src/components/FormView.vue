@@ -473,12 +473,52 @@ const tabFields = computed(() => {
 	let lastFieldIndex = 0
 
 	props.tabs?.forEach((tab) => {
+		// Find the Tab Break field that starts this tab
+		// Look for Tab Break fields in the fields array
+		let tabBreakIndex = -1
+		if (tab.name === "Service Report") {
+			tabBreakIndex = props.fields.findIndex(
+				(field) => field.fieldname === "service_request_form_tab"
+			)
+		} else if (tab.name === "Cash Memo") {
+			tabBreakIndex = props.fields.findIndex(
+				(field) => field.fieldname === "cash_memo_tab"
+			)
+		} else if (tab.name === "Reopen Log") {
+			tabBreakIndex = props.fields.findIndex(
+				(field) => field.fieldname === "reopen_log_tab"
+			)
+		}
+		
+		// If Tab Break found, start from the field after it; otherwise use firstFieldIndex
+		if (tabBreakIndex >= 0) {
+			firstFieldIndex = tabBreakIndex + 1
+		}
+		
+		// Find the last field for this tab
 		lastFieldIndex = props.fields.findIndex(
 			(field) => field.fieldname === tab.lastField
 		)
-		fieldList = props.fields.slice(firstFieldIndex, lastFieldIndex + 1)
-		fieldsByTab[tab.name] = fieldList
-		firstFieldIndex = lastFieldIndex + 1
+		
+		// Only slice if both indices are valid
+		if (lastFieldIndex >= 0 && firstFieldIndex <= lastFieldIndex) {
+			fieldList = props.fields.slice(firstFieldIndex, lastFieldIndex + 1)
+			fieldsByTab[tab.name] = fieldList
+			firstFieldIndex = lastFieldIndex + 1
+		} else if (lastFieldIndex < 0) {
+			// If lastField not found (might be filtered out), try to include all fields from firstFieldIndex
+			// up to the next tab break or end of array
+			const nextTabBreakIndex = props.fields.findIndex(
+				(field, index) => index > firstFieldIndex && field.fieldtype === "Tab Break"
+			)
+			if (nextTabBreakIndex >= 0) {
+				fieldList = props.fields.slice(firstFieldIndex, nextTabBreakIndex)
+			} else {
+				fieldList = props.fields.slice(firstFieldIndex)
+			}
+			fieldsByTab[tab.name] = fieldList
+			firstFieldIndex = firstFieldIndex + fieldList.length
+		}
 	})
 
 	return fieldsByTab

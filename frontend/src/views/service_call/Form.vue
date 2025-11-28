@@ -105,6 +105,9 @@ const serviceCall = ref({
 const selectedTechnician = ref(null)
 const isTechnicianInitializing = ref(false)
 
+// Flag to track if form is being initialized/reloaded (to prevent watchers from clearing fields)
+const isFormInitializing = ref(false)
+
 // Technicians dropdown: employees with department = "Technician - AA" and status = "Active"
 const techniciansResource = createResource({
 	url: "frappe.client.get_list",
@@ -301,11 +304,20 @@ const formFields = computed(() => {
 formFieldsResource.reload()
 
 // Watch for customer changes to clear dependent fields
+// Only clear if it's a user-initiated change, not during form initialization/reload
 watch(
 	() => serviceCall.value.customer,
 	(newCustomer, oldCustomer) => {
-		console.log("[Customer Watcher] Customer changed:", { old: oldCustomer, new: newCustomer })
-		if (newCustomer !== oldCustomer) {
+		console.log("[Customer Watcher] Customer changed:", { old: oldCustomer, new: newCustomer, isInitializing: isFormInitializing.value })
+		
+		// Skip clearing during initialization/reload
+		if (isFormInitializing.value) {
+			console.log("[Customer Watcher] Skipping clear - form is initializing")
+			return
+		}
+		
+		// Only clear if customer actually changed and old value existed (user change, not initial load)
+		if (newCustomer !== oldCustomer && oldCustomer !== undefined && oldCustomer !== null && oldCustomer !== "") {
 			// Clear branch and contacted_person when customer changes
 			serviceCall.value.branch = ""
 			serviceCall.value.contacted_person = ""
@@ -316,11 +328,20 @@ watch(
 )
 
 // Watch for branch changes to clear dependent fields
+// Only clear if it's a user-initiated change, not during form initialization/reload
 watch(
 	() => serviceCall.value.branch,
 	(newBranch, oldBranch) => {
-		console.log("[Branch Watcher] Branch changed:", { old: oldBranch, new: newBranch })
-		if (newBranch !== oldBranch) {
+		console.log("[Branch Watcher] Branch changed:", { old: oldBranch, new: newBranch, isInitializing: isFormInitializing.value })
+		
+		// Skip clearing during initialization/reload
+		if (isFormInitializing.value) {
+			console.log("[Branch Watcher] Skipping clear - form is initializing")
+			return
+		}
+		
+		// Only clear if branch actually changed and old value existed (user change, not initial load)
+		if (newBranch !== oldBranch && oldBranch !== undefined && oldBranch !== null && oldBranch !== "") {
 			// Clear contacted_person when branch changes
 			serviceCall.value.contacted_person = ""
 			console.log("[Branch Watcher] Cleared contacted_person")
@@ -329,15 +350,60 @@ watch(
 	{ immediate: false }
 )
 
+// Watch for document loading/reloading to set initialization flag
+// This prevents watchers from clearing fields during form initialization
+watch(
+	() => props.id,
+	(newId, oldId) => {
+		// When transitioning from new doc (no id) to existing doc (has id), we're initializing
+		if (!oldId && newId) {
+			console.log("[Form Init] Document ID appeared, setting initialization flag")
+			isFormInitializing.value = true
+			// Reset flag after a short delay to allow form to load
+			setTimeout(() => {
+				isFormInitializing.value = false
+				console.log("[Form Init] Initialization complete, clearing flag")
+			}, 500)
+		}
+	},
+	{ immediate: false }
+)
+
+// Watch for when serviceCall gets populated with document data (after save/reload)
+// This happens when FormView updates the modelValue after documentResource loads
+watch(
+	() => serviceCall.value?.name,
+	(newName, oldName) => {
+		// When name appears or changes (document loaded/reloaded), set initialization flag
+		if (newName && newName !== oldName && props.id) {
+			console.log("[Form Init] Document name appeared/changed, setting initialization flag")
+			isFormInitializing.value = true
+			// Reset flag after form has time to update all fields
+			setTimeout(() => {
+				isFormInitializing.value = false
+				console.log("[Form Init] Reload complete, clearing flag")
+			}, 500)
+		}
+	},
+	{ immediate: false }
+)
+
 // helper functions
 function getFilteredFields(fields) {
-	// For new documents (first stage creation), only show specific fields
+	const roles = Array.isArray(userResource.data?.roles) ? userResource.data.roles : []
+	const hasTechnicianRole = roles.includes("Technician")
+	const currentState = serviceCall.value?.workflow_state || ""
+
+	// For new documents (creation stage) - Service Manager only
 	if (!props.id) {
+		// Service Manager sees the 10 basic fields during creation
+		// Also include address if available (it's fetched from branch)
 		const allowedFields = [
 			"naming_series",
 			"date",
 			"customer",
 			"branch",
+			"address",
 			"contacted_person",
 			"mobile_no",
 			"email",
@@ -345,38 +411,27 @@ function getFilteredFields(fields) {
 			"special_instruction",
 			"technician_list",
 		]
-		// Filter and sort fields to maintain correct order
 		const filtered = fields.filter((field) => allowedFields.includes(field.fieldname))
-		// Sort by the order in allowedFields array
 		return filtered.sort((a, b) => {
 			const indexA = allowedFields.indexOf(a.fieldname)
 			const indexB = allowedFields.indexOf(b.fieldname)
 			return indexA - indexB
 		})
 	}
-	
+
 	// For existing documents:
-	// - Technician role:
-	//    - When workflow_state = "Assigned": show only the 10 basic fields (no technician_list, no service details)
-	//    - After "Accept Call" (but not "Close"): show all fields EXCEPT technician_list
-	//    - When workflow_state = "Close": show only the 10 basic fields (no service details, no technician_list)
-	// - Service Manager / Others:
-	//    - When workflow_state = "Assigned": show ALL fields INCLUDING technician_list (can perform all actions)
-	//    - When workflow_state = "Open": show only the 10 basic fields INCLUDING technician_list
-	//    - When workflow_state = "Close": show ALL fields INCLUDING technician_list
-	//    - Otherwise: show only the 10 basic fields INCLUDING technician_list
-	const roles = Array.isArray(userResource.data?.roles) ? userResource.data.roles : []
-	const hasTechnicianRole = roles.includes("Technician")
-	const currentState = serviceCall.value?.workflow_state || ""
-
 	if (hasTechnicianRole) {
-		// In "Assigned" state, technician should see only the 10 basic fields (no service details, no technician dropdown)
+		// Technician role:
+		// - In "Assigned" state: show only 9 basic fields (no technician_list, no service details)
+		// - After "Accept Call" (any other state): show ALL fields EXCEPT technician_list
+		// - Technician List should NEVER be visible to Technician at any stage
 		if (currentState === "Assigned") {
 			const technicianBasicFields = [
 				"naming_series",
 				"date",
 				"customer",
 				"branch",
+				"address",
 				"contacted_person",
 				"mobile_no",
 				"email",
@@ -393,81 +448,28 @@ function getFilteredFields(fields) {
 			})
 		}
 
-		// In "Close" state, technician should see only the 10 basic fields (no service details, no technician dropdown)
-		if (currentState === "Close") {
-			const technicianBasicFields = [
-				"naming_series",
-				"date",
-				"customer",
-				"branch",
-				"contacted_person",
-				"mobile_no",
-				"email",
-				"type",
-				"special_instruction",
-			]
-			const filtered = fields.filter((field) =>
-				technicianBasicFields.includes(field.fieldname)
-			)
-			return filtered.sort((a, b) => {
-				const indexA = technicianBasicFields.indexOf(a.fieldname)
-				const indexB = technicianBasicFields.indexOf(b.fieldname)
-				return indexA - indexB
-			})
-		}
-
-		// For all other states (after "Accept Call", but not "Close"), 
-		// technician sees all fields except technician_list
-		return fields.filter((field) => field.fieldname !== "technician_list")
+		// For all other states (after "Accept Call"), technician sees all fields EXCEPT technician_list
+		// IMPORTANT: We must preserve the original field order and include ALL structural fields
+		// (Section Break, Tab Break, Column Break) to ensure sections and tabs work correctly
+		const filtered = fields.filter((field) => {
+			// Always include structural fields (Section Break, Tab Break, Column Break)
+			// These are needed for proper rendering of sections and tabs
+			if (field.fieldtype === "Section Break" || 
+			    field.fieldtype === "Tab Break" || 
+			    field.fieldtype === "Column Break") {
+				return true
+			}
+			// Exclude only technician_list
+			return field.fieldname !== "technician_list"
+		})
+		
+		// Ensure we preserve the original field order (filter already does this, but being explicit)
+		return filtered
 	} else {
-		// Service Manager / Others: Check if state is "Assigned", "Open", or "Close"
-		if (currentState === "Assigned") {
-			// In "Assigned" state, show ALL fields including technician_list (Service Manager can perform all actions)
-			return fields
-		} else if (currentState === "Open") {
-			// In "Open" state, show the same fields as first step (10 basic fields) with all data filled in
-			const allowedFields = [
-				"naming_series",
-				"date",
-				"customer",
-				"branch",
-				"contacted_person",
-				"mobile_no",
-				"email",
-				"type",
-				"special_instruction",
-				"technician_list",
-			]
-			const filtered = fields.filter((field) => allowedFields.includes(field.fieldname))
-			return filtered.sort((a, b) => {
-				const indexA = allowedFields.indexOf(a.fieldname)
-				const indexB = allowedFields.indexOf(b.fieldname)
-				return indexA - indexB
-			})
-		} else if (currentState === "Close") {
-			// In "Close" state, show ALL fields including technician_list
-			return fields
-		} else {
-			// Otherwise: only the basic fields including technician_list
-			const allowedFields = [
-				"naming_series",
-				"date",
-				"customer",
-				"branch",
-				"contacted_person",
-				"mobile_no",
-				"email",
-				"type",
-				"special_instruction",
-				"technician_list",
-			]
-			const filtered = fields.filter((field) => allowedFields.includes(field.fieldname))
-			return filtered.sort((a, b) => {
-				const indexA = allowedFields.indexOf(a.fieldname)
-				const indexB = allowedFields.indexOf(b.fieldname)
-				return indexA - indexB
-			})
-		}
+		// Service Manager / Others:
+		// - Once Service Call is created and assigned (any state after creation): show ALL fields
+		// - This means after the document has an ID, Service Manager always sees all fields
+		return fields
 	}
 }
 

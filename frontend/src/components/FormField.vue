@@ -111,16 +111,12 @@
 			</button>
 		</div>
 
-		<!-- Signature field (simple text-based signature area) -->
-		<Input
+		<!-- Signature field with canvas -->
+		<SignatureCanvas
 			v-else-if="props.fieldtype === 'Signature'"
-			type="text"
-			:value="modelValue"
-			:placeholder="__('Sign here')"
-			@input="(v) => emit('update:modelValue', v)"
-			@change="(v) => emit('change', v)"
-			v-bind="$attrs"
-			:disabled="isReadOnly"
+			:modelValue="modelValue"
+			:isReadOnly="isReadOnly"
+			@update:modelValue="(v) => emit('update:modelValue', v)"
 		/>
 
 		<!-- Section Break -->
@@ -174,6 +170,7 @@ import { Autocomplete, DateTimePicker, ErrorMessage, Input, FeatherIcon } from "
 import { computed, onMounted, inject } from "vue"
 
 import Link from "@/components/Link.vue"
+import SignatureCanvas from "@/components/SignatureCanvas.vue"
 
 const __ = inject("$translate")
 
