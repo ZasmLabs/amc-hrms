@@ -28,14 +28,15 @@
 					</div>
 				</template>
 
-				<!-- Child Tables - Only show for existing documents -->
-				<template v-if="props.id" #table_whpt="{ isFormReadOnly }">
+				<!-- Cash Memo Table -->
+				<template #table_whpt="{ isFormReadOnly }">
 					<CashMemoTable
 						v-model:serviceCall="serviceCall"
 						:isReadOnly="isFormReadOnly"
 					/>
 				</template>
 
+				<!-- Reopen Call Table - Only show for existing documents -->
 				<template v-if="props.id" #reopen_call="{ isFormReadOnly }">
 					<ReopenCallListTable
 						v-model:serviceCall="serviceCall"
