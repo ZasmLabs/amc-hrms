@@ -84,14 +84,16 @@
 							class="flex flex-col space-y-4 p-4"
 						>
 							<template v-for="field in fieldList" :key="field.fieldname">
+								<!-- Custom slot for Table fields or any field with custom component -->
 								<slot
-									v-if="field.fieldtype == 'Table'"
+									v-if="field.fieldtype == 'Table' || hasCustomSlot(field.fieldname)"
 									:name="field.fieldname"
 									:isFormReadOnly="isFormReadOnly"
 								></slot>
 
+								<!-- Default FormField for fields without custom slots -->
 								<FormField
-									v-else
+									v-else-if="field.fieldtype != 'Table' && !hasCustomSlot(field.fieldname)"
 									:fieldtype="field.fieldtype"
 									:fieldname="field.fieldname"
 									v-model="formModel[field.fieldname]"
@@ -131,15 +133,16 @@
 
 				<div class="flex flex-col space-y-4 p-4" v-else>
 					<template v-for="field in props.fields" :key="field.fieldname">
-						<!-- Custom slot handling for Table fields (e.g. technician_list) -->
+						<!-- Custom slot handling for Table fields or any field with custom component -->
 						<slot
-							v-if="field.fieldtype == 'Table'"
+							v-if="field.fieldtype == 'Table' || hasCustomSlot(field.fieldname)"
 							:name="field.fieldname"
 							:isFormReadOnly="isFormReadOnly"
 						></slot>
 
+						<!-- Default FormField for fields without custom slots -->
 						<FormField
-							v-else
+							v-else-if="field.fieldtype != 'Table' && !hasCustomSlot(field.fieldname)"
 							:fieldtype="field.fieldtype"
 							:fieldname="field.fieldname"
 							v-model="formModel[field.fieldname]"
@@ -318,7 +321,7 @@
 </template>
 
 <script setup>
-import { computed, inject, nextTick, onMounted, ref, watch } from "vue"
+import { computed, inject, nextTick, onMounted, ref, watch, useSlots } from "vue"
 import { useRouter } from "vue-router"
 import {
 	ErrorMessage,
@@ -384,6 +387,13 @@ const props = defineProps({
 	},
 })
 const emit = defineEmits(["validateForm", "update:modelValue"])
+
+const slots = useSlots()
+
+// Check if a custom slot exists for a field
+function hasCustomSlot(fieldname) {
+	return !!slots[fieldname]
+}
 const router = useRouter()
 
 const __ = inject("$translate")

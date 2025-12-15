@@ -43,6 +43,17 @@
 						:isReadOnly="isFormReadOnly"
 					/>
 				</template>
+
+				<!-- Custom Contact Person Field with Create functionality -->
+				<template #contact_person="{ isFormReadOnly }">
+					<ContactPersonField
+						:modelValue="serviceCall.contact_person"
+						@update:modelValue="(val) => serviceCall.contact_person = val"
+						:branch="serviceCall.branch"
+						:customer="serviceCall.customer"
+						:isReadOnly="isFormReadOnly"
+					/>
+				</template>
 			</FormView>
 		</ion-content>
 	</ion-page>
@@ -57,6 +68,7 @@ import { inject } from "vue"
 import FormView from "@/components/FormView.vue"
 import CashMemoTable from "@/components/CashMemoTable.vue"
 import ReopenCallListTable from "@/components/ReopenCallListTable.vue"
+import ContactPersonField from "@/components/ContactPersonField.vue"
 import { userResource } from "@/data/user"
 
 const __ = inject("$translate")
@@ -294,6 +306,24 @@ const formFields = computed(() => {
 					branch: "__NO_BRANCH__"
 				}
 				console.log("[FormFields] Contacted Person field - No branch selected, using empty filter")
+			}
+		}
+		
+		// Update contact_person field - use Link component with dynamic filters
+		// Note: This field uses a custom component (ContactPersonField) which handles the Link component internally
+		// We still set linkFilters here for consistency, but the custom component will use its own filters
+		if (fieldCopy.fieldname === "contact_person") {
+			if (_selectedBranch) {
+				fieldCopy.linkFilters = {
+					branch: _selectedBranch
+				}
+				console.log("[FormFields] Contact Person field - Setting linkFilters with branch:", _selectedBranch)
+			} else {
+				// If no branch, set impossible filter to show empty
+				fieldCopy.linkFilters = {
+					branch: "__NO_BRANCH__"
+				}
+				console.log("[FormFields] Contact Person field - No branch selected, using empty filter")
 			}
 		}
 		
