@@ -38,6 +38,17 @@
 									{{ __("Settings") }}
 								</Button>
 								<Button
+									v-if="notifications.data?.length"
+									variant="outline"
+									@click="clearAllNotifications.submit"
+									:loading="clearAllNotifications.loading"
+								>
+									<template #prefix>
+										<FeatherIcon name="trash-2" class="w-4" />
+									</template>
+									{{ __("Clear all") }}
+								</Button>
+								<Button
 									v-if="unreadNotificationsCount.data"
 									variant="outline"
 									@click="markAllAsRead.submit"
@@ -55,28 +66,40 @@
 							class="flex flex-col bg-white rounded"
 							v-if="notifications.data?.length"
 						>
-							<router-link
+							<div
 								:class="[
-									'flex flex-row items-start p-4 justify-between border-b before:mt-3',
+									'flex flex-row items-start p-4 justify-between border-b before:mt-3 group',
 									`before:content-[''] before:mr-2 before:shrink-0 before:w-1.5 before:h-1.5 before:rounded-full`,
 									item.read ? 'bg-white-500' : 'before:bg-blue-500',
 								]"
 								v-for="item in notifications.data"
 								:key="item.name"
-								:to="getItemRoute(item)"
-								@click="markAsRead(item.name)"
 							>
-								<EmployeeAvatar :userID="item.from_user" size="lg" />
-								<div class="flex flex-col gap-0.5 grow ml-3">
-									<div
-										class="text-sm leading-5 font-normal text-gray-800"
-										v-html="item.message"
-									></div>
-									<div class="text-xs font-normal text-gray-500">
-										{{ dayjs(item.creation).fromNow() }}
+								<router-link
+									:to="getItemRoute(item)"
+									@click="markAsRead(item.name)"
+									class="flex flex-row items-start grow"
+								>
+									<EmployeeAvatar :userID="item.from_user" size="lg" />
+									<div class="flex flex-col gap-0.5 grow ml-3">
+										<div
+											class="text-sm leading-5 font-normal text-gray-800"
+											v-html="item.message"
+										></div>
+										<div class="text-xs font-normal text-gray-500">
+											{{ dayjs(item.creation).fromNow() }}
+										</div>
 									</div>
-								</div>
-							</router-link>
+								</router-link>
+								<Button
+									variant="ghost"
+									class="opacity-0 group-hover:opacity-100 transition-opacity ml-2"
+									@click.stop="deleteNotification(item.name)"
+									:loading="deletingNotifications.has(item.name)"
+								>
+									<FeatherIcon name="x" class="w-4 h-4 text-gray-400" />
+								</Button>
+							</div>
 							
 						</div>
 						<div v-if="notifications.data?.length && notifications.hasNextPage" class="flex">
@@ -128,8 +151,19 @@ const markAllAsRead = createResource({
 	url: "hrms.api.mark_all_notifications_as_read",
 	onSuccess() {
 		notifications.reload()
+		unreadNotificationsCount.reload()
 	},
 })
+
+const clearAllNotifications = createResource({
+	url: "hrms.api.delete_all_notifications",
+	onSuccess() {
+		notifications.reload()
+		unreadNotificationsCount.reload()
+	},
+})
+
+const deletingNotifications = ref(new Set())
 
 function markAsRead(name) {
 	notifications.setValue.submit(
@@ -140,6 +174,27 @@ function markAsRead(name) {
 			},
 		}
 	)
+}
+
+function deleteNotification(name) {
+	if (deletingNotifications.value.has(name)) return
+	
+	deletingNotifications.value.add(name)
+	
+	const deleteResource = createResource({
+		url: "hrms.api.delete_notification",
+		makeParams: () => ({ name }),
+		onSuccess() {
+			deletingNotifications.value.delete(name)
+			notifications.reload()
+			unreadNotificationsCount.reload()
+		},
+		onError() {
+			deletingNotifications.value.delete(name)
+		},
+	})
+	
+	deleteResource.reload()
 }
 
 function getItemRoute(item) {

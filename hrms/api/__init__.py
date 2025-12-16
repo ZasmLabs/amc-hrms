@@ -111,6 +111,35 @@ def mark_all_notifications_as_read() -> None:
 
 
 @frappe.whitelist()
+def delete_all_notifications() -> None:
+	"""Delete all notifications for the current user"""
+	frappe.db.delete(
+		"PWA Notification",
+		{"to_user": frappe.session.user},
+	)
+
+
+@frappe.whitelist()
+def delete_notification(name: str) -> None:
+	"""Delete a specific notification"""
+	# Verify the notification belongs to the current user
+	notification = frappe.db.get_value(
+		"PWA Notification",
+		name,
+		["to_user"],
+		as_dict=True,
+	)
+	
+	if not notification:
+		frappe.throw("Notification not found")
+	
+	if notification.to_user != frappe.session.user:
+		frappe.throw("You don't have permission to delete this notification")
+	
+	frappe.delete_doc("PWA Notification", name, ignore_permissions=True)
+
+
+@frappe.whitelist()
 def are_push_notifications_enabled() -> bool:
 	try:
 		return frappe.db.get_single_value("Push Notification Settings", "enable_push_notification_relay")

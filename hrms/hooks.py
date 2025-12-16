@@ -212,6 +212,10 @@ doc_events = {
 	},
 	"Project": {"validate": "hrms.controllers.employee_boarding_controller.update_employee_boarding_status"},
 	"Task": {"on_update": "hrms.controllers.employee_boarding_controller.update_task"},
+	"Service Call": {
+		"after_insert": "hrms.mixins.service_call_notifications.notify_service_call_created",
+		"on_update": "hrms.mixins.service_call_notifications.send_service_call_notifications",
+	},
 }
 
 # Scheduled Tasks
