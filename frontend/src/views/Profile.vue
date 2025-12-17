@@ -71,7 +71,7 @@
 						<!-- Settings -->
 						<div
 							class="flex flex-col gap-5 my-4 w-full"
-							v-if="allowPushNotifications"
+							v-if="showSettingsLink"
 						>
 							<div class="flex flex-col bg-white rounded">
 								<router-link
@@ -220,6 +220,10 @@ const allowPushNotifications = computed(
 	() =>
 		window.frappe?.boot.push_relay_server_url &&
 		arePushNotificationsEnabled.data
+)
+
+const showSettingsLink = computed(
+	() => window.frappe?.boot.push_relay_server_url
 )
 
 const openInfoModal = async (request) => {

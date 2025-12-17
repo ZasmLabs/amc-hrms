@@ -24,7 +24,7 @@ def get_boot():
 	bootinfo = frappe._dict(
 		{
 			"site_name": frappe.local.site,
-			"push_relay_server_url": frappe.conf.get("push_relay_server_url") or "",
+			"push_relay_server_url": frappe.conf.get("push_relay_server_url") or "https://push-notification-relay.frappe.cloud",
 			"default_route": get_default_route(),
 		}
 	)

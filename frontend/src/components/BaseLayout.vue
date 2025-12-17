@@ -25,6 +25,12 @@
 								</span>
 							</router-link>
 							<router-link
+								:to="{ name: 'Settings' }"
+								class="flex flex-col items-center"
+							>
+								<FeatherIcon name="settings" class="h-6 w-6 text-gray-700" />
+							</router-link>
+							<router-link
 								:to="{ name: 'Profile' }"
 								class="flex flex-col items-center"
 							>

@@ -28,7 +28,7 @@
 							</div>
 							<div class="flex ml-auto gap-1">
 								<Button
-									v-if="allowPushNotifications"
+									v-if="showSettingsLink"
 									variant="outline"
 									@click="router.push({ name: 'Settings' })"
 								>
@@ -145,6 +145,10 @@ const allowPushNotifications = computed(
 	() =>
 		window.frappe?.boot.push_relay_server_url &&
 		arePushNotificationsEnabled.data
+)
+
+const showSettingsLink = computed(
+	() => window.frappe?.boot.push_relay_server_url
 )
 
 const markAllAsRead = createResource({
