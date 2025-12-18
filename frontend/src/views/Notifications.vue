@@ -2,11 +2,12 @@
 	<ion-page>
 		<ion-content class="ion-padding">
 			<div class="flex flex-col h-screen w-screen">
-				<div class="w-full sm:w-96">
+				<div class="w-full sm:w-96 mx-auto">
+					<!-- Header -->
 					<header
-						class="flex flex-row bg-white shadow-sm py-4 px-3 items-center justify-between border-b sticky top-0 z-10"
+						class="flex flex-row bg-white shadow-sm py-4 px-4 items-center border-b sticky top-0 z-10"
 					>
-						<div class="flex flex-row items-center">
+						<div class="flex flex-row items-center gap-2">
 							<Button
 								variant="ghost"
 								class="!pl-0 hover:bg-white"
@@ -14,104 +15,127 @@
 							>
 								<FeatherIcon name="chevron-left" class="h-5 w-5" />
 							</Button>
-							<h2 class="text-xl font-semibold text-gray-900">{{ __("Notifications") }} </h2>
+							<h2 class="text-xl font-semibold text-gray-900">
+								{{ __("Notifications") }}
+							</h2>
 						</div>
 					</header>
 
-					<div class="flex flex-col gap-4 mt-5 p-4">
-						<div class="flex flex-row justify-between items-center">
+					<!-- Content -->
+					<div class="flex flex-col gap-4 p-4">
+						<!-- Unread Count and Action Buttons -->
+						<div class="flex flex-row justify-between items-center flex-wrap gap-3">
 							<div
-								class="text-lg text-gray-800 font-semibold"
+								class="text-lg font-semibold text-gray-900"
 								v-if="unreadNotificationsCount.data"
 							>
 								{{ __("{0} Unread", [unreadNotificationsCount.data]) }}
 							</div>
-							<div class="flex ml-auto gap-1">
+							<div class="flex flex-wrap gap-2 ml-auto">
 								<Button
 									v-if="showSettingsLink"
 									variant="outline"
+									size="sm"
 									@click="router.push({ name: 'Settings' })"
 								>
 									<template #prefix>
-										<FeatherIcon name="settings" class="w-4" />
+										<FeatherIcon name="settings" class="w-4 h-4" />
 									</template>
 									{{ __("Settings") }}
 								</Button>
 								<Button
 									v-if="notifications.data?.length"
 									variant="outline"
+									size="sm"
 									@click="clearAllNotifications.submit"
 									:loading="clearAllNotifications.loading"
 								>
 									<template #prefix>
-										<FeatherIcon name="trash-2" class="w-4" />
+										<FeatherIcon name="trash-2" class="w-4 h-4" />
 									</template>
 									{{ __("Clear all") }}
 								</Button>
 								<Button
 									v-if="unreadNotificationsCount.data"
 									variant="outline"
+									size="sm"
 									@click="markAllAsRead.submit"
 									:loading="markAllAsRead.loading"
 								>
 									<template #prefix>
-										<FeatherIcon name="check-circle" class="w-4" />
+										<FeatherIcon name="check-circle" class="w-4 h-4" />
 									</template>
 									{{ __("Mark all as read") }}
 								</Button>
 							</div>
 						</div>
 
+						<!-- Notifications List -->
 						<div
-							class="flex flex-col bg-white rounded"
+							class="flex flex-col gap-2"
 							v-if="notifications.data?.length"
 						>
 							<div
-								:class="[
-									'flex flex-row items-start p-4 justify-between border-b before:mt-3 group',
-									`before:content-[''] before:mr-2 before:shrink-0 before:w-1.5 before:h-1.5 before:rounded-full`,
-									item.read ? 'bg-white-500' : 'before:bg-blue-500',
-								]"
+								class="flex flex-row items-start gap-3 p-4 bg-white rounded-lg border border-gray-200 hover:border-gray-300 transition-colors group"
 								v-for="item in notifications.data"
 								:key="item.name"
 							>
+								<!-- Unread Indicator -->
+								<div
+									v-if="!item.read"
+									class="w-2 h-2 bg-blue-500 rounded-full mt-2 shrink-0"
+								></div>
+								<div v-else class="w-2 shrink-0"></div>
+
+								<!-- Avatar -->
+								<EmployeeAvatar :userID="item.from_user" size="lg" />
+
+								<!-- Notification Content -->
 								<router-link
 									:to="getItemRoute(item)"
 									@click="markAsRead(item.name)"
-									class="flex flex-row items-start grow"
+									class="flex flex-col gap-1 flex-1 min-w-0"
 								>
-									<EmployeeAvatar :userID="item.from_user" size="lg" />
-									<div class="flex flex-col gap-0.5 grow ml-3">
-										<div
-											class="text-sm leading-5 font-normal text-gray-800"
-											v-html="item.message"
-										></div>
-										<div class="text-xs font-normal text-gray-500">
-											{{ dayjs(item.creation).fromNow() }}
-										</div>
+									<div
+										class="text-sm leading-5 text-gray-900"
+										v-html="item.message"
+									></div>
+									<div class="text-xs text-gray-500">
+										{{ dayjs(item.creation).fromNow() }}
 									</div>
 								</router-link>
+
+								<!-- Delete Button -->
 								<Button
 									variant="ghost"
-									class="opacity-0 group-hover:opacity-100 transition-opacity ml-2"
+									size="sm"
+									class="opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
 									@click.stop="deleteNotification(item.name)"
 									:loading="deletingNotifications.has(item.name)"
 								>
 									<FeatherIcon name="x" class="w-4 h-4 text-gray-400" />
 								</Button>
 							</div>
-							
 						</div>
-						<div v-if="notifications.data?.length && notifications.hasNextPage" class="flex">
+
+						<!-- Load More -->
+						<div
+							v-if="notifications.data?.length && notifications.hasNextPage"
+							class="flex justify-center pt-2"
+						>
 							<Button
 								variant="outline"
-								class="ml-auto"
 								@click="loadMore"
 							>
-								{{ __('Load more') }}
+								{{ __("Load more") }}
 							</Button>
 						</div>
-						<EmptyState v-else-if="!notifications.data" :message="__('You have no notifications')" />
+
+						<!-- Empty State -->
+						<EmptyState
+							v-else-if="!notifications.data?.length"
+							:message="__('You have no notifications')"
+						/>
 					</div>
 				</div>
 			</div>

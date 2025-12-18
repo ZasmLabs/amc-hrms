@@ -119,6 +119,16 @@
 			@update:modelValue="(v) => emit('update:modelValue', v)"
 		/>
 
+		<!-- Attach/Image field -->
+		<ImageUploadField
+			v-else-if="props.fieldtype === 'Attach' || props.fieldtype === 'Attach Image' || props.fieldname === 'site_photo'"
+			:modelValue="modelValue"
+			:label="props.label"
+			:isReadOnly="isReadOnly"
+			:fieldname="props.fieldname"
+			@update:modelValue="(v) => emit('update:modelValue', v)"
+		/>
+
 		<!-- Section Break -->
 		<div
 			v-else-if="props.fieldtype === 'Section Break'"
@@ -171,6 +181,7 @@ import { computed, onMounted, inject } from "vue"
 
 import Link from "@/components/Link.vue"
 import SignatureCanvas from "@/components/SignatureCanvas.vue"
+import ImageUploadField from "@/components/ImageUploadField.vue"
 
 const __ = inject("$translate")
 

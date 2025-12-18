@@ -26,6 +26,8 @@ SUPPORTED_FIELD_TYPES = [
 	"Currency",
 	"Signature",
 	"Rating",
+	"Attach",
+	"Attach Image",
 ]
 
 

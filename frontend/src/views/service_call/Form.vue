@@ -54,6 +54,17 @@
 						:isReadOnly="isFormReadOnly"
 					/>
 				</template>
+
+				<!-- Custom Site Photo Field -->
+				<template #site_photo="{ isFormReadOnly }">
+					<ImageUploadField
+						:modelValue="serviceCall.site_photo"
+						:label="__('Site Photo')"
+						:fieldname="'site_photo'"
+						:isReadOnly="isFormReadOnly"
+						@update:modelValue="(val) => serviceCall.site_photo = val"
+					/>
+				</template>
 			</FormView>
 		</ion-content>
 	</ion-page>
@@ -69,6 +80,7 @@ import FormView from "@/components/FormView.vue"
 import CashMemoTable from "@/components/CashMemoTable.vue"
 import ReopenCallListTable from "@/components/ReopenCallListTable.vue"
 import ContactPersonField from "@/components/ContactPersonField.vue"
+import ImageUploadField from "@/components/ImageUploadField.vue"
 import { userResource } from "@/data/user"
 
 const __ = inject("$translate")
