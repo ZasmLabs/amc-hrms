@@ -96,12 +96,12 @@
 									@click="markAsRead(item.name)"
 									class="flex flex-col gap-1 flex-1 min-w-0"
 								>
-									<div
+										<div
 										class="text-sm leading-5 text-gray-900"
-										v-html="item.message"
-									></div>
+											v-html="item.message"
+										></div>
 									<div class="text-xs text-gray-500">
-										{{ dayjs(item.creation).fromNow() }}
+											{{ dayjs(item.creation).fromNow() }}
 									</div>
 								</router-link>
 
