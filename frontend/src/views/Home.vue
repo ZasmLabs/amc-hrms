@@ -27,12 +27,12 @@ const __ = inject("$translate")
 const quickLinks = [
 	{
 		icon: markRaw(AttendanceIcon),
-		title: __("Request Attendance"),
+		title: __("Mark Attendance"),
 		route: "AttendanceRequestFormView",
 	},
 	{
 		icon: markRaw(LeaveIcon),
-		title: __("Request Leave"),
+		title: __("Apply Leave"),
 		route: "LeaveApplicationFormView",
 	},
 	{

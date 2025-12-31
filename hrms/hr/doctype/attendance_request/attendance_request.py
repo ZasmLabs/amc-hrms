@@ -180,10 +180,10 @@ class AttendanceRequest(Document):
 	def get_attendance_status(self, attendance_date: str) -> str:
 		if self.half_day and date_diff(getdate(self.half_day_date), getdate(attendance_date)) == 0:
 			return "Half Day"
-		elif self.reason == "Work From Home":
+		elif self.status == "Work From Home":
 			return "Work From Home"
 		else:
-			return "Present"
+			return self.status if self.status else "Present"
 
 	def status_unchanged(self, attendance_date):
 		new_status = self.get_attendance_status(attendance_date)

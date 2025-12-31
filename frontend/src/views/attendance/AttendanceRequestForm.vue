@@ -4,10 +4,12 @@
 			<FormView
 				v-if="formFields.data"
 				doctype="Attendance Request"
+				:pageTitle="__('Mark Attendance')"
 				v-model="attendanceRequest"
 				:isSubmittable="true"
 				:fields="formFields.data"
 				:id="props.id"
+				:redirectOnSave="props.id ? null : 'Home'"
 				@validateForm="validateForm"
 			/>
 		</ion-content>
@@ -22,7 +24,9 @@ import { ref, watch, inject } from "vue"
 import FormView from "@/components/FormView.vue"
 
 const employee = inject("$employee")
+const dayjs = inject("$dayjs")
 const __ = inject("$translate")
+const today = dayjs().format("YYYY-MM-DD")
 
 const props = defineProps({
 	id: {
@@ -31,8 +35,12 @@ const props = defineProps({
 	},
 })
 
-// reactive object to store form data
-const attendanceRequest = ref({})
+// reactive object to store form data with default values
+const attendanceRequest = ref({
+	from_date: today,
+	to_date: today,
+	status: "Present",
+})
 
 // get form fields
 const formFields = createResource({
@@ -41,8 +49,10 @@ const formFields = createResource({
 	auto: true,
 	transform(data) {
 		if (props.id) return data
+		// Keep status field visible - it's required for the form
+		// Hide employee, employee_name, company, shift as they are auto-filled
 		return data.filter(
-			(field) => !["employee", "employee_name", "status", "company", "shift"].includes(field.fieldname)
+			(field) => !["employee", "employee_name", "company", "shift"].includes(field.fieldname)
 		)
 	},
 })

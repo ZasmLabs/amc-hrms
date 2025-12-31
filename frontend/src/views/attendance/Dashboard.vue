@@ -6,7 +6,7 @@
 				<div class="w-full">
 					<router-link :to="{ name: 'AttendanceRequestFormView' }" v-slot="{ navigate }">
 						<Button @click="navigate" variant="solid" class="w-full py-5 text-base">
-							{{ __("Request Attendance") }}
+							{{ __("Mark Attendance") }}
 						</Button>
 					</router-link>
 				</div>

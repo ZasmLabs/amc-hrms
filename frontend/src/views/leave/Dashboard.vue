@@ -14,7 +14,7 @@
 							variant="solid"
 							class="py-5 text-base w-full"
 						>
-							{{ __("Request a Leave") }}
+							{{ __("Apply Leave") }}
 						</Button>
 					</router-link>
 					<div>

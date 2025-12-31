@@ -4,6 +4,7 @@
 			<FormView
 				v-if="formFields.data"
 				doctype="Leave Application"
+				:pageTitle="__('Apply Leave')"
 				v-model="leaveApplication"
 				:isSubmittable="true"
 				:fields="formFields.data"

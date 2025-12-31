@@ -18,7 +18,7 @@
 					<h2
 						class="text-xl font-semibold text-gray-900 whitespace-nowrap overflow-hidden text-ellipsis"
 					>
-						{{ __(props.doctype) }}
+						{{ props.pageTitle || __(props.doctype) }}
 					</h2>
 					<Badge
 						:label="id"
@@ -50,7 +50,7 @@
 					/>
 				</div>
 				<h2 v-else class="text-2xl font-semibold text-gray-900">
-					{{ __('New {0}', [__(doctype)], props.doctype) }}
+					{{ __('New {0}', [props.pageTitle || __(doctype)], props.doctype) }}
 				</h2>
 			</header>
 
@@ -385,6 +385,16 @@ const props = defineProps({
 		required: false,
 		default: true,
 	},
+	pageTitle: {
+		type: String,
+		required: false,
+		default: null,
+	},
+	redirectOnSave: {
+		type: String,
+		required: false,
+		default: null,
+	},
 })
 const emit = defineEmits(["validateForm", "update:modelValue"])
 
@@ -601,10 +611,14 @@ const docList = createListResource({
 			})
 			await uploadAllAttachments(data.doctype, data.name, fileAttachments.value)
 
-			router.replace({
-				name: `${props.doctype.replace(/\s+/g, "")}DetailView`,
-				params: { id: data.name },
-			})
+			if (props.redirectOnSave) {
+				router.replace({ name: props.redirectOnSave })
+			} else {
+				router.replace({
+					name: `${props.doctype.replace(/\s+/g, "")}DetailView`,
+					params: { id: data.name },
+				})
+			}
 		},
 		onError() {
 			toast({

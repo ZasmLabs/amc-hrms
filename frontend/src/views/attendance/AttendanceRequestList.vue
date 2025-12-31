@@ -2,7 +2,7 @@
 	<ion-page>
 		<ListView
 			doctype="Attendance Request"
-			:pageTitle="__('Attendance Request History')"
+			:pageTitle="__('Attendance History')"
 			:fields="ATTENDANCE_REQUEST_FIELDS"
 			:filterConfig="FILTER_CONFIG"
 		/>

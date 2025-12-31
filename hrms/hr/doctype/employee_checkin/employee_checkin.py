@@ -397,3 +397,83 @@ def update_attendance_in_checkins(log_names: list, attendance_id: str):
 		.set("attendance", attendance_id)
 		.where(EmployeeCheckin.name.isin(log_names))
 	).run()
+
+
+def auto_checkout_employees():
+	"""
+	Auto checkout employees who forgot to check out.
+	This function should be scheduled to run at midnight (12:00 AM).
+	
+	It finds all employees who have an "IN" checkin as their last log for the day
+	and creates an "OUT" checkin at 23:59:59 of that day.
+	"""
+	from frappe.utils import now_datetime, get_datetime, add_days, getdate
+	
+	# Get yesterday's date (since this runs at midnight, we process the previous day)
+	today = getdate()
+	yesterday = add_days(today, -1)
+	
+	# Find all employees who have a check-in on yesterday but no check-out after it
+	# We need to find the last log for each employee on yesterday
+	employees_with_open_checkins = frappe.db.sql("""
+		SELECT DISTINCT ec1.employee, ec1.name as checkin_name, ec1.time as checkin_time
+		FROM `tabEmployee Checkin` ec1
+		WHERE DATE(ec1.time) = %(yesterday)s
+		AND ec1.log_type = 'IN'
+		AND NOT EXISTS (
+			SELECT 1 FROM `tabEmployee Checkin` ec2
+			WHERE ec2.employee = ec1.employee
+			AND ec2.log_type = 'OUT'
+			AND ec2.time > ec1.time
+			AND DATE(ec2.time) = %(yesterday)s
+		)
+		AND ec1.time = (
+			SELECT MAX(ec3.time) 
+			FROM `tabEmployee Checkin` ec3 
+			WHERE ec3.employee = ec1.employee 
+			AND DATE(ec3.time) = %(yesterday)s
+		)
+	""", {"yesterday": yesterday}, as_dict=True)
+	
+	if not employees_with_open_checkins:
+		frappe.logger().info("Auto Checkout: No employees with open check-ins found for {}".format(yesterday))
+		return
+	
+	# Create auto-checkout for each employee
+	auto_checkout_time = get_datetime("{} 23:59:59".format(yesterday))
+	
+	for record in employees_with_open_checkins:
+		try:
+			# Get employee details
+			employee = frappe.get_doc("Employee", record.employee)
+			
+			# Create the auto-checkout record
+			checkout = frappe.new_doc("Employee Checkin")
+			checkout.employee = record.employee
+			checkout.employee_name = employee.employee_name
+			checkout.log_type = "OUT"
+			checkout.time = auto_checkout_time
+			checkout.device_id = "AUTO_CHECKOUT"
+			checkout.flags.ignore_validate = True  # Skip validations for auto-generated record
+			checkout.insert(ignore_permissions=True)
+			
+			frappe.logger().info(
+				"Auto Checkout: Created checkout for employee {} at {}".format(
+					record.employee, auto_checkout_time
+				)
+			)
+			
+		except Exception as e:
+			frappe.log_error(
+				title="Auto Checkout Failed",
+				message="Failed to create auto checkout for employee {}: {}".format(
+					record.employee, str(e)
+				)
+			)
+	
+	frappe.db.commit()
+	frappe.logger().info(
+		"Auto Checkout: Processed {} employees for {}".format(
+			len(employees_with_open_checkins), yesterday
+		)
+	)

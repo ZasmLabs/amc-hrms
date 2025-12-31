@@ -20,7 +20,7 @@
   "include_holidays",
   "shift",
   "reason_section",
-  "reason",
+  "status",
   "column_break_4",
   "explanation",
   "amended_from"
@@ -70,16 +70,10 @@
    "reqd": 1
   },
   {
-   "fieldname": "to_date",
-   "fieldtype": "Date",
-   "in_list_view": 1,
-   "label": "To Date",
-   "reqd": 1
-  },
-  {
    "default": "0",
    "fieldname": "half_day",
    "fieldtype": "Check",
+   "hidden": 1,
    "label": "Half Day"
   },
   {
@@ -91,16 +85,7 @@
   },
   {
    "fieldname": "reason_section",
-   "fieldtype": "Section Break",
-   "label": "Reason"
-  },
-  {
-   "fieldname": "reason",
-   "fieldtype": "Select",
-   "in_list_view": 1,
-   "label": "Reason",
-   "options": "Work From Home\nOn Duty",
-   "reqd": 1
+   "fieldtype": "Section Break"
   },
   {
    "fieldname": "column_break_4",
@@ -109,6 +94,7 @@
   {
    "fieldname": "explanation",
    "fieldtype": "Small Text",
+   "hidden": 1,
    "label": "Explanation"
   },
   {
@@ -124,6 +110,7 @@
    "description": "Note: Shift will not be overwritten in existing attendance records",
    "fieldname": "shift",
    "fieldtype": "Link",
+   "hidden": 1,
    "label": "Shift",
    "options": "Shift Type"
   },
@@ -131,12 +118,28 @@
    "default": "0",
    "fieldname": "include_holidays",
    "fieldtype": "Check",
+   "hidden": 1,
    "label": "Include Holidays"
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Status",
+   "options": "\nPresent\nAbsent",
+   "reqd": 1
+  },
+  {
+   "fieldname": "to_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "To Date",
+   "reqd": 1
   }
  ],
  "is_submittable": 1,
  "links": [],
- "modified": "2023-12-20 16:18:31.864719",
+ "modified": "2025-12-30 15:44:18.803796",
  "modified_by": "Administrator",
  "module": "HR",
  "name": "Attendance Request",
@@ -201,6 +204,7 @@
    "write": 1
   }
  ],
+ "row_format": "Dynamic",
  "sort_field": "modified",
  "sort_order": "DESC",
  "states": [],

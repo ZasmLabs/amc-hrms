@@ -247,6 +247,12 @@ scheduler_events = {
 	],
 	"weekly": ["hrms.controllers.employee_reminders.send_reminders_in_advance_weekly"],
 	"monthly": ["hrms.controllers.employee_reminders.send_reminders_in_advance_monthly"],
+	# Auto checkout employees at midnight (12:00 AM)
+	"cron": {
+		"0 0 * * *": [
+			"hrms.hr.doctype.employee_checkin.employee_checkin.auto_checkout_employees",
+		],
+	},
 }
 
 advance_payment_doctypes = ["Leave Encashment", "Gratuity", "Employee Advance"]
