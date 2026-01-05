@@ -75,6 +75,7 @@ import { IonPage, IonContent } from "@ionic/vue"
 import { createResource, Autocomplete } from "frappe-ui"
 import { ref, computed, watch, onMounted } from "vue"
 import { inject } from "vue"
+import { useRouter } from "vue-router"
 
 import FormView from "@/components/FormView.vue"
 import CashMemoTable from "@/components/CashMemoTable.vue"
@@ -85,6 +86,7 @@ import { userResource } from "@/data/user"
 
 const __ = inject("$translate")
 const dayjs = inject("$dayjs")
+const router = useRouter()
 
 const today = dayjs().format("YYYY-MM-DD")
 
@@ -426,6 +428,30 @@ watch(
 				isFormInitializing.value = false
 				console.log("[Form Init] Reload complete, clearing flag")
 			}, 500)
+		}
+	},
+	{ immediate: false }
+)
+
+// Watch for workflow_state changes - redirect technicians to home after rejection
+watch(
+	() => serviceCall.value?.workflow_state,
+	(newState, oldState) => {
+		// Only handle state changes for existing documents
+		if (!props.id || !newState || !oldState) {
+			return
+		}
+		
+		// Check if state changed to "Rejected"
+		if (newState === "Rejected" && oldState !== "Rejected") {
+			// Check if current user is a Technician
+			const roles = Array.isArray(userResource.data?.roles) ? userResource.data.roles : []
+			const hasTechnicianRole = roles.includes("Technician")
+			
+			if (hasTechnicianRole) {
+				// Redirect technician to home screen after rejection
+				router.replace({ name: "Home" })
+			}
 		}
 	},
 	{ immediate: false }
