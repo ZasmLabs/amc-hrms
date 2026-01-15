@@ -26,7 +26,7 @@
 					<div class="text-lg text-gray-800 font-bold">{{ __("All Service Calls") }}</div>
 					<RequestList
 						:component="markRaw(ServiceCallItem)"
-						:items="allServiceCalls.data"
+						:items="limitedServiceCalls"
 						:addListButton="true"
 						listButtonRoute="ServiceCallListView"
 					/>
@@ -54,6 +54,12 @@ const __ = inject("$translate")
 const showCreateButton = computed(() => {
 	const roles = Array.isArray(userResource.data?.roles) ? userResource.data.roles : []
 	return roles.includes("Service Manager") || roles.includes("System Manager")
+})
+
+// Limit service calls to 5 for the dashboard view
+const limitedServiceCalls = computed(() => {
+	if (!allServiceCalls.data) return []
+	return allServiceCalls.data.slice(0, 5)
 })
 </script>
 

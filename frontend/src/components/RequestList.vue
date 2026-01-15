@@ -43,6 +43,7 @@
 
 <script setup>
 import { ref, inject } from "vue"
+import { useRouter } from "vue-router"
 import { IonModal } from "@ionic/vue"
 import RequestActionSheet from "@/components/RequestActionSheet.vue"
 
@@ -55,6 +56,7 @@ import {
 } from "@/data/config/requestSummaryFields"
 
 const __ = inject("$translate")
+const router = useRouter()
 const props = defineProps({
 	component: {
 		type: Object,
@@ -92,6 +94,13 @@ const isRequestModalOpen = ref(false)
 const selectedRequest = ref(null)
 
 const openRequestModal = async (request) => {
+	// For Service Calls, navigate to detail view instead of opening modal
+	if (request.doctype === "Service Call" && request.name) {
+		router.push({ name: "ServiceCallDetailView", params: { id: request.name } })
+		return
+	}
+	
+	// For other request types, open modal as before
 	selectedRequest.value = request
 	isRequestModalOpen.value = true
 }

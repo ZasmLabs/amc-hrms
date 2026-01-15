@@ -45,13 +45,14 @@
 				</template>
 
 				<!-- Custom Contact Person Field with Create functionality -->
+				<!-- Always editable across all workflow states -->
 				<template #contact_person="{ isFormReadOnly }">
 					<ContactPersonField
 						:modelValue="serviceCall.contact_person"
 						@update:modelValue="(val) => serviceCall.contact_person = val"
 						:branch="serviceCall.branch"
 						:customer="serviceCall.customer"
-						:isReadOnly="isFormReadOnly"
+						:isReadOnly="false"
 					/>
 				</template>
 
@@ -338,6 +339,19 @@ const formFields = computed(() => {
 					branch: "__NO_BRANCH__"
 				}
 				console.log("[FormFields] Contact Person field - No branch selected, using empty filter")
+			}
+		}
+		
+		// Make Special Instructions read-only for Technician role only
+		if (fieldCopy.fieldname === "special_instruction") {
+			const roles = Array.isArray(userResource.data?.roles) ? userResource.data.roles : []
+			const hasTechnicianRole = roles.includes("Technician")
+			// Explicitly set read_only: only for Technicians, ensure it's editable for others
+			if (hasTechnicianRole) {
+				fieldCopy.read_only = 1
+			} else {
+				// Ensure it's editable for Service Manager and other roles
+				fieldCopy.read_only = 0
 			}
 		}
 		

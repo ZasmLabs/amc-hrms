@@ -116,9 +116,28 @@ const serviceCalls = createResource({
 				}
 				
 				// Check if logged-in employee is in technicians
-				return call.technicians.some(
+				const isAssigned = call.technicians.some(
 					(tech) => tech.employee === employeeName
 				)
+				if (!isAssigned) {
+					return false
+				}
+				
+				// Filter out Completed and Annulled workflow states
+				const workflowState = call.workflow_state || call.status || ""
+				if (workflowState === "Completed" || workflowState === "Annulled") {
+					return false
+				}
+				
+				return true
+			})
+		}
+		
+		// If no employee data, still filter out Completed/Annulled
+		if (data) {
+			return data.filter((call) => {
+				const workflowState = call.workflow_state || call.status || ""
+				return workflowState !== "Completed" && workflowState !== "Annulled"
 			})
 		}
 		

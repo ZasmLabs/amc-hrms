@@ -118,7 +118,7 @@
 </template>
 
 <script setup>
-import { ref, computed, inject, watch } from "vue"
+import { ref, computed, inject, watch, nextTick } from "vue"
 import { Autocomplete, Button, Input, createResource, toast, debounce } from "frappe-ui"
 
 const __ = inject("$translate")
@@ -200,7 +200,7 @@ const contactOptionsResource = createResource({
 })
 
 // Reload options function
-function reloadOptions(searchTextVal = "") {
+async function reloadOptions(searchTextVal = "") {
 	contactOptionsResource.update({
 		params: {
 			doctype: "Customer Contact",
@@ -208,7 +208,7 @@ function reloadOptions(searchTextVal = "") {
 			filters: linkFilters.value,
 		},
 	})
-	contactOptionsResource.reload()
+	await contactOptionsResource.reload()
 }
 
 // Computed autocomplete options - add "Create new" option if query doesn't match
@@ -383,7 +383,12 @@ async function createContactPerson() {
 		}
 
 		// Use the API resource endpoint - send data directly
-		await createContactResource.submit({ data: doc })
+		const response = await createContactResource.submit({ data: doc })
+		
+		// Get the created contact's name from the response
+		// Since autoname is "field:name1", the document name will be the name1 value
+		// Try multiple response structures to be safe
+		const createdContactName = response?.data?.name || response?.name || response?.data?.data?.name || doc.name1.trim()
 		
 		// Show success message
 		toast({
@@ -394,7 +399,48 @@ async function createContactPerson() {
 		})
 		
 		// Reload options to include the new contact
-		reloadOptions("")
+		await reloadOptions("")
+		
+		// Wait for Vue to update the reactive data
+		await nextTick()
+		
+		// Automatically select the newly created contact
+		if (createdContactName) {
+			// First, emit the update to set the model value
+			emit("update:modelValue", createdContactName)
+			
+			// Wait another tick for the emit to propagate
+			await nextTick()
+			
+			// Update the autocomplete to show the selected value
+			if (autocompleteRef.value) {
+				// Find the option that matches the created contact
+				const options = contactOptionsResource.data || []
+				const foundOption = options.find((opt) => opt.value === createdContactName)
+				
+				if (foundOption) {
+					autocompleteRef.value.value = foundOption
+				} else {
+					// If not found yet, reload with the contact name as search text
+					searchText.value = createdContactName
+					await reloadOptions(createdContactName)
+					await nextTick()
+					
+					const updatedOptions = contactOptionsResource.data || []
+					const updatedOption = updatedOptions.find((opt) => opt.value === createdContactName)
+					
+					if (updatedOption && autocompleteRef.value) {
+						autocompleteRef.value.value = updatedOption
+					} else {
+						// Fallback: create a temporary option object
+						autocompleteRef.value.value = {
+							label: createdContactName,
+							value: createdContactName,
+						}
+					}
+				}
+			}
+		}
 		
 		// Close the form
 		showCreateForm.value = false

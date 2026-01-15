@@ -2,15 +2,6 @@
 	<div class="flex flex-col mt-2 gap-4">
 		<div class="flex flex-row justify-between items-center">
 			<h2 class="text-base font-semibold text-gray-800">{{ __("Cash Memo") }}</h2>
-			<Button
-				v-if="!isReadOnly"
-				class="text-sm"
-				icon="plus"
-				variant="subtle"
-				@click="addCashMemo"
-			>
-				{{ __("Add Item") }}
-			</Button>
 		</div>
 
 		<div
@@ -101,8 +92,27 @@
 					/>
 				</div>
 			</div>
+			<!-- Add button always visible when not read-only, even when items exist -->
+			<Button
+				v-if="!isReadOnly"
+				variant="solid"
+				class="w-full"
+				@click="addCashMemo"
+			>
+				{{ __("Add") }}
+			</Button>
 		</div>
-		<EmptyState v-else :message="__('No cash memo items. Click Add Item to add one.')" :isTableField="true" />
+		<div v-else class="flex flex-col gap-4">
+			<EmptyState :message="__('No cash memo items. Click Add Item to add one.')" :isTableField="true" />
+			<Button
+				v-if="!isReadOnly"
+				variant="solid"
+				class="w-full"
+				@click="addCashMemo"
+			>
+				{{ __("Add") }}
+			</Button>
+		</div>
 	</div>
 </template>
 

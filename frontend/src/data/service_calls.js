@@ -43,7 +43,12 @@ export const allServiceCalls = createResource({
 	auto: true,
 	cache: "hrms:all_service_calls",
 	transform(data) {
-		return transformServiceCallData(data)
+		const transformed = transformServiceCallData(data)
+		// Filter out Completed and Annulled workflow states
+		return transformed.filter((call) => {
+			const workflowState = call.workflow_state || call.status || ""
+			return workflowState !== "Completed" && workflowState !== "Annulled"
+		})
 	},
 	onSuccess() {
 		serviceCallSummary.reload()

@@ -83,6 +83,14 @@ const serviceCalls = createResource({
 		limit: 50,
 	}),
 	auto: true,
+	transform(data) {
+		// Filter out Completed and Annulled workflow states
+		if (!data) return data
+		return data.filter((call) => {
+			const workflowState = call.workflow_state || call.status || ""
+			return workflowState !== "Completed" && workflowState !== "Annulled"
+		})
+	},
 })
 
 // Handle refresh

@@ -1,20 +1,26 @@
 <template>
 	<div class="flex flex-col gap-2">
-		<!-- Display existing image if available -->
-		<div v-if="modelValue" class="relative">
-			<img
-				:src="getImageUrl(modelValue)"
-				:alt="label"
-				class="w-full h-48 object-cover rounded border border-gray-300"
-			/>
-			<button
-				v-if="!isReadOnly"
-				type="button"
-				@click="removeImage"
-				class="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+		<!-- Display existing images in a grid -->
+		<div v-if="imageList.length > 0" class="grid grid-cols-2 gap-3">
+			<div
+				v-for="(image, index) in imageList"
+				:key="index"
+				class="relative"
 			>
-				<FeatherIcon name="x" class="h-4 w-4" />
-			</button>
+				<img
+					:src="getImageUrl(image)"
+					:alt="`${label} ${index + 1}`"
+					class="w-full h-48 object-cover rounded border border-gray-300"
+				/>
+				<button
+					v-if="!isReadOnly"
+					type="button"
+					@click="removeImage(index)"
+					class="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+				>
+					<FeatherIcon name="x" class="h-4 w-4" />
+				</button>
+			</div>
 		</div>
 
 		<!-- Upload button -->
@@ -24,16 +30,17 @@
 			>
 				<FeatherIcon name="upload" class="h-8 w-8 text-gray-500" />
 				<span class="text-sm font-medium text-gray-700">
-					{{ modelValue ? __("Change Photo") : __("Upload Photo") }}
+					{{ imageList.length > 0 ? __("Add More Photos") : __("Add Photos") }}
 				</span>
 				<span class="text-xs text-gray-500">
-					{{ __("Click to select an image") }}
+					{{ __("Click to select one or more images") }}
 				</span>
 			</div>
 			<input
 				ref="fileInput"
 				type="file"
 				accept="image/*"
+				multiple
 				class="hidden"
 				@change="handleFileSelect"
 			/>
@@ -42,7 +49,7 @@
 </template>
 
 <script setup>
-import { ref, inject } from "vue"
+import { ref, computed, inject } from "vue"
 import { FeatherIcon } from "frappe-ui"
 import { frappeRequest } from "frappe-ui"
 
@@ -61,6 +68,17 @@ const props = defineProps({
 const emit = defineEmits(["update:modelValue"])
 const fileInput = ref(null)
 
+// Parse modelValue to get array of image file names
+// Frappe stores multiple attachments as comma-separated string
+const imageList = computed(() => {
+	if (!props.modelValue) return []
+	// Split by comma and trim whitespace, filter out empty strings
+	return props.modelValue
+		.split(",")
+		.map((img) => img.trim())
+		.filter((img) => img.length > 0)
+})
+
 function getImageUrl(value) {
 	if (!value) return ""
 	// If it's already a full URL, return it
@@ -72,59 +90,87 @@ function getImageUrl(value) {
 	return `/files/${value}`
 }
 
-async function handleFileSelect(event) {
-	const file = event.target.files?.[0]
-	if (!file) return
+// Update the modelValue by joining the image list with commas
+function updateModelValue(images) {
+	if (images.length === 0) {
+		emit("update:modelValue", "")
+	} else {
+		emit("update:modelValue", images.join(","))
+	}
+}
 
-	// Check if it's an image
-	if (!file.type.startsWith("image/")) {
-		alert(__("Please select an image file"))
+async function handleFileSelect(event) {
+	const files = Array.from(event.target.files || [])
+	if (files.length === 0) return
+
+	// Filter to only image files
+	const imageFiles = files.filter((file) => file.type.startsWith("image/"))
+	if (imageFiles.length === 0) {
+		alert(__("Please select image files"))
 		return
 	}
 
+	// If some files were filtered out, notify user
+	if (imageFiles.length < files.length) {
+		alert(__("Some files were skipped. Only image files are allowed."))
+	}
+
+	// Start with existing images
+	const currentImages = [...imageList.value]
+	const uploadedFiles = []
+
 	try {
-		// Use FormData to upload the file
-		const formData = new FormData()
-		formData.append("file", file, file.name)
-		formData.append("is_private", "0")
-		formData.append("folder", "Home")
-		formData.append("file_name", file.name)
+		// Upload all selected images
+		for (const file of imageFiles) {
+			const formData = new FormData()
+			formData.append("file", file, file.name)
+			formData.append("is_private", "0")
+			formData.append("folder", "Home")
+			formData.append("file_name", file.name)
 
-		// Use native fetch for FormData upload
-		const response = await fetch("/api/method/upload_file", {
-			method: "POST",
-			headers: {
-				"X-Frappe-CSRF-Token": window.csrf_token || document.querySelector('meta[name="csrf-token"]')?.content,
-			},
-			body: formData,
-		})
+			const response = await fetch("/api/method/upload_file", {
+				method: "POST",
+				headers: {
+					"X-Frappe-CSRF-Token": window.csrf_token || document.querySelector('meta[name="csrf-token"]')?.content,
+				},
+				body: formData,
+			})
 
-		if (!response.ok) {
-			const errorData = await response.json().catch(() => ({}))
-			throw new Error(errorData.message || "Upload failed")
-		}
+			if (!response.ok) {
+				const errorData = await response.json().catch(() => ({}))
+				throw new Error(errorData.message || "Upload failed")
+			}
 
-		const result = await response.json()
+			const result = await response.json()
 
-		// The API returns the File document
-		if (result?.message) {
-			// If file_name is directly in message, use it
-			if (result.message.file_name) {
-				emit("update:modelValue", result.message.file_name)
-			} else if (result.message.name) {
-				// Otherwise, fetch the File document to get file_name
-				const fileDoc = await frappeRequest({
-					url: `/api/resource/File/${result.message.name}`,
-					method: "GET",
-				})
-				if (fileDoc?.data?.file_name) {
-					emit("update:modelValue", fileDoc.data.file_name)
+			// Get the file name from the response
+			let fileName = null
+			if (result?.message) {
+				if (result.message.file_name) {
+					fileName = result.message.file_name
+				} else if (result.message.name) {
+					// Fetch the File document to get file_name
+					const fileDoc = await frappeRequest({
+						url: `/api/resource/File/${result.message.name}`,
+						method: "GET",
+					})
+					if (fileDoc?.data?.file_name) {
+						fileName = fileDoc.data.file_name
+					}
 				}
 			}
+
+			if (fileName) {
+				uploadedFiles.push(fileName)
+			}
 		}
+
+		// Combine existing images with newly uploaded ones
+		const allImages = [...currentImages, ...uploadedFiles]
+		updateModelValue(allImages)
 	} catch (error) {
-		console.error("Error uploading image:", error)
-		alert(__("Failed to upload image. Please try again."))
+		console.error("Error uploading images:", error)
+		alert(__("Failed to upload images. Please try again."))
 	}
 
 	// Reset the input
@@ -133,8 +179,9 @@ async function handleFileSelect(event) {
 	}
 }
 
-function removeImage() {
-	emit("update:modelValue", "")
+function removeImage(index) {
+	const newImages = imageList.value.filter((_, i) => i !== index)
+	updateModelValue(newImages)
 }
 </script>
 
