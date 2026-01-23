@@ -482,7 +482,6 @@ function getFilteredFields(fields) {
 		// Service Manager sees the 10 basic fields during creation
 		// Also include address if available (it's fetched from branch)
 		const allowedFields = [
-			"naming_series",
 			"date",
 			"customer",
 			"branch",
@@ -510,7 +509,6 @@ function getFilteredFields(fields) {
 		// - Technician List should NEVER be visible to Technician at any stage
 		if (currentState === "Assigned") {
 			const technicianBasicFields = [
-				"naming_series",
 				"date",
 				"customer",
 				"branch",
@@ -531,7 +529,7 @@ function getFilteredFields(fields) {
 			})
 		}
 
-		// For all other states (after "Accept Call"), technician sees all fields EXCEPT technician_list
+		// For all other states (after "Accept Call"), technician sees all fields EXCEPT technician_list and naming_series
 		// IMPORTANT: We must preserve the original field order and include ALL structural fields
 		// (Section Break, Tab Break, Column Break) to ensure sections and tabs work correctly
 		const filtered = fields.filter((field) => {
@@ -542,17 +540,17 @@ function getFilteredFields(fields) {
 			    field.fieldtype === "Column Break") {
 				return true
 			}
-			// Exclude only technician_list
-			return field.fieldname !== "technician_list"
+			// Exclude technician_list and naming_series
+			return field.fieldname !== "technician_list" && field.fieldname !== "naming_series"
 		})
 		
 		// Ensure we preserve the original field order (filter already does this, but being explicit)
 		return filtered
 	} else {
 		// Service Manager / Others:
-		// - Once Service Call is created and assigned (any state after creation): show ALL fields
-		// - This means after the document has an ID, Service Manager always sees all fields
-		return fields
+		// - Once Service Call is created and assigned (any state after creation): show ALL fields EXCEPT naming_series
+		// - This means after the document has an ID, Service Manager sees all fields except naming_series
+		return fields.filter((field) => field.fieldname !== "naming_series")
 	}
 }
 
