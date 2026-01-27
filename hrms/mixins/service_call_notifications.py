@@ -36,7 +36,7 @@ class ServiceCallNotificationsMixin:
 				state_changed = True
 		
 		if state_changed and current_state == "Assigned":
-			technicians = self.get_technician_users()
+			technicians = self.get_technician_users_to_notify()
 			
 			if not technicians:
 				return
@@ -100,7 +100,7 @@ class ServiceCallNotificationsMixin:
 	def notify_technicians_reopened(self):
 		"""Notify technicians when Service Call is reopened"""
 		if self.has_value_changed("workflow_state") and self.workflow_state == "Reopen":
-			technicians = self.get_technician_users()
+			technicians = self.get_technician_users_to_notify()
 			if not technicians:
 				return
 
@@ -162,6 +162,21 @@ class ServiceCallNotificationsMixin:
 		if hasattr(self, "technician_list") and self.technician_list:
 			for tech in self.technician_list:
 				if tech.employee:
+					user_id = frappe.db.get_value("Employee", tech.employee, "user_id", cache=True)
+					if user_id:
+						technician_users.append(user_id)
+
+		return list(set(technician_users))  # Remove duplicates
+
+	def get_technician_users_to_notify(self) -> list[str]:
+		"""Get list of user IDs for technicians who should receive notifications (notify checkbox is checked)"""
+		technician_users = []
+
+		if hasattr(self, "technician_list") and self.technician_list:
+			for tech in self.technician_list:
+				# Check if notify checkbox is checked (defaults to True if not set for backward compatibility)
+				should_notify = getattr(tech, "notify", True)
+				if should_notify and tech.employee:
 					user_id = frappe.db.get_value("Employee", tech.employee, "user_id", cache=True)
 					if user_id:
 						technician_users.append(user_id)

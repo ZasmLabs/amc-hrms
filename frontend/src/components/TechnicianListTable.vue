@@ -70,6 +70,7 @@ function addTechnician() {
 		props.serviceCall.technician_list = []
 	}
 	props.serviceCall.technician_list.push({
+		notify: true, // Default to checked (notify enabled)
 		employee: "",
 		employee_name: "",
 		designation: "",
