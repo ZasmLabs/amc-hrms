@@ -173,7 +173,7 @@ function handleTechnicianSelect(selected) {
 	// For now, set a single technician row in technician_list
 	serviceCall.value.technician_list = [
 		{
-			notify: true, // Default to checked (notify enabled)
+			primary: true, // Default to checked (primary enabled)
 			employee: emp.name,
 			employee_name: emp.employee_name || emp.first_name || emp.name,
 			designation: emp.designation || "",

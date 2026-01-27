@@ -169,13 +169,13 @@ class ServiceCallNotificationsMixin:
 		return list(set(technician_users))  # Remove duplicates
 
 	def get_technician_users_to_notify(self) -> list[str]:
-		"""Get list of user IDs for technicians who should receive notifications (notify checkbox is checked)"""
+		"""Get list of user IDs for technicians who should receive notifications (primary checkbox is checked)"""
 		technician_users = []
 
 		if hasattr(self, "technician_list") and self.technician_list:
 			for tech in self.technician_list:
-				# Check if notify checkbox is checked (defaults to True if not set for backward compatibility)
-				should_notify = getattr(tech, "notify", True)
+				# Check if primary checkbox is checked (defaults to True if not set for backward compatibility)
+				should_notify = getattr(tech, "primary", True)
 				if should_notify and tech.employee:
 					user_id = frappe.db.get_value("Employee", tech.employee, "user_id", cache=True)
 					if user_id:

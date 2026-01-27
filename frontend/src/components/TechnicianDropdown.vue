@@ -128,7 +128,7 @@ function addTechnician(selected) {
 	}
 	
 	const newTechnician = {
-		notify: true, // Default to checked (notify enabled)
+		primary: true, // Default to checked (primary enabled)
 		employee: employeeData.name,
 		employee_name: employeeData.employee_name || employeeData.first_name || employeeData.name,
 		designation: employeeData.designation || "",
