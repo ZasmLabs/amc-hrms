@@ -136,20 +136,42 @@ const isTechnicianInitializing = ref(false)
 // Flag to track if form is being initialized/reloaded (to prevent watchers from clearing fields)
 const isFormInitializing = ref(false)
 
-// Technicians dropdown: employees with department = "Technician - AA" and status = "Active"
-const techniciansResource = createResource({
-	url: "frappe.client.get_list",
-	params: {
+// Technicians dropdown: employees with department = "Technician - AA", status = "Active", and branch filter
+// Make it reactive to service_branch field
+const getTechnicianParams = () => {
+	const filters = {
+		department: "Technician - AA",
+		status: "Active",
+	}
+	
+	// Add branch filter if Company Branch is selected
+	if (serviceCall.value?.service_branch) {
+		filters.branch = serviceCall.value.service_branch
+	}
+	
+	return {
 		doctype: "Employee",
 		fields: ["name", "employee_name", "first_name", "designation", "department", "cell_number"],
-		filters: {
-			department: "Technician - AA",
-			status: "Active",
-		},
+		filters: filters,
 		limit_page_length: 1000,
-	},
+	}
+}
+
+const techniciansResource = createResource({
+	url: "frappe.client.get_list",
+	params: getTechnicianParams(),
 	auto: true,
 })
+
+// Watch service_branch changes to reload technician list with updated filters
+watch(
+	() => serviceCall.value?.service_branch,
+	() => {
+		// Update params and reload
+		techniciansResource.params = getTechnicianParams()
+		techniciansResource.reload()
+	}
+)
 
 const technicianOptions = computed(() => {
 	if (!techniciansResource.data) return []
@@ -480,17 +502,13 @@ function getFilteredFields(fields) {
 
 	// For new documents (creation stage) - Service Manager only
 	if (!props.id) {
-		// Service Manager sees the 10 basic fields during creation
-		// Also include address if available (it's fetched from branch)
+		// Service Manager sees these fields during creation
 		const allowedFields = [
-			"date",
 			"customer",
 			"branch",
-			"address",
 			"contacted_person",
-			"mobile_no",
-			"email",
 			"type",
+			"service_branch",
 			"special_instruction",
 			"technician_list",
 		]
@@ -505,9 +523,9 @@ function getFilteredFields(fields) {
 	// For existing documents:
 	if (hasTechnicianRole) {
 		// Technician role:
-		// - In "Assigned" state: show only 9 basic fields (no technician_list, no service details)
-		// - After "Accept Call" (any other state): show ALL fields EXCEPT technician_list
-		// - Technician List should NEVER be visible to Technician at any stage
+		// - In "Assigned" state: show only 9 basic fields (no technician_list, no service_branch, no service details)
+		// - After "Accept Call" (any other state): show ALL fields EXCEPT technician_list and service_branch
+		// - Technician List and Company Branch should NEVER be visible to Technician at any stage
 		if (currentState === "Assigned") {
 			const technicianBasicFields = [
 				"date",
@@ -530,7 +548,7 @@ function getFilteredFields(fields) {
 			})
 		}
 
-		// For all other states (after "Accept Call"), technician sees all fields EXCEPT technician_list and naming_series
+		// For all other states (after "Accept Call"), technician sees all fields EXCEPT technician_list, service_branch, and naming_series
 		// IMPORTANT: We must preserve the original field order and include ALL structural fields
 		// (Section Break, Tab Break, Column Break) to ensure sections and tabs work correctly
 		const filtered = fields.filter((field) => {
@@ -541,8 +559,10 @@ function getFilteredFields(fields) {
 			    field.fieldtype === "Column Break") {
 				return true
 			}
-			// Exclude technician_list and naming_series
-			return field.fieldname !== "technician_list" && field.fieldname !== "naming_series"
+			// Exclude technician_list, service_branch (Company Branch), and naming_series
+			return field.fieldname !== "technician_list" && 
+			       field.fieldname !== "service_branch" && 
+			       field.fieldname !== "naming_series"
 		})
 		
 		// Ensure we preserve the original field order (filter already does this, but being explicit)
@@ -551,7 +571,14 @@ function getFilteredFields(fields) {
 		// Service Manager / Others:
 		// - Once Service Call is created and assigned (any state after creation): show ALL fields EXCEPT naming_series
 		// - This means after the document has an ID, Service Manager sees all fields except naming_series
-		return fields.filter((field) => field.fieldname !== "naming_series")
+		// - Technician List is always visible to Service Manager
+		const filtered = fields.filter((field) => field.fieldname !== "naming_series")
+		
+		// Debug: Log to verify technician_list is included
+		const hasTechnicianList = filtered.some(f => f.fieldname === "technician_list")
+		console.log("[Service Manager] Fields filtered, technician_list included:", hasTechnicianList)
+		
+		return filtered
 	}
 }
 
