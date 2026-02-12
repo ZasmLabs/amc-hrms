@@ -205,6 +205,7 @@ function getFilteredFields(fields) {
 	const excludeFields = [
 		"naming_series",
 		"task",
+		"project",
 		"taxes_and_charges_sb",
 		"advance_payments_sb",
 	]
@@ -237,10 +238,6 @@ function applyFilters(field) {
 		field.linkFilters = {
 			company: expenseClaim.value.company,
 			is_group: 0,
-		}
-	} else if (field.fieldname === "project") {
-		field.linkFilters = {
-			company: expenseClaim.value.company,
 		}
 	}
 
