@@ -2,7 +2,7 @@
 	<ion-page>
 		<ListView
 			doctype="Expense Claim"
-			:pageTitle="('Claim History')"
+			:pageTitle="__('Expense History')"
 			:tabButtons="TAB_BUTTONS"
 			:fields="EXPENSE_CLAIM_FIELDS"
 			groupBy="`tabExpense Claim`.name"
@@ -14,9 +14,10 @@
 <script setup>
 import { IonPage } from "@ionic/vue"
 import ListView from "@/components/ListView.vue"
+import { inject } from "vue"
 
-
-const TAB_BUTTONS = ["My Claims", "Team Claims"] // __("My Claims"), __("Team Claims")
+const __ = inject("$translate")
+const TAB_BUTTONS = ["My Expenses", "Team Expenses"] // __("My Expenses"), __("Team Expenses")
 const EXPENSE_CLAIM_FIELDS = [
 	"`tabExpense Claim`.name",
 	"`tabExpense Claim`.employee",
@@ -35,27 +36,27 @@ const FILTER_CONFIG = [
 	{
 		fieldname: "approval_status",
 		fieldtype: "Select",
-		label: "Approval Status",
+		label: __("Approval Status"),
 		options: ["Draft", "Approved", "Rejected"],
 	},
 	{
 		fieldname: "status",
 		fieldtype: "Select",
-		label: "Status",
+		label: __("Status"),
 		options: ["Draft", "Paid", "Unpaid", "Rejected", "Submitted", "Cancelled"],
 	},
 	{
 		fieldname: "employee",
 		fieldtype: "Link",
-		label: "Employee",
+		label: __("Employee"),
 		options: "Employee",
 	},
 	{
 		fieldname: "department",
 		fieldtype: "Link",
-		label: "Department",
+		label: __("Department"),
 		options: "Department",
 	},
-	{ fieldname: "posting_date", fieldtype: "Date", label: "Posting Date" },
+	{ fieldname: "posting_date", fieldtype: "Date", label: __("Posting Date") },
 ]
 </script>

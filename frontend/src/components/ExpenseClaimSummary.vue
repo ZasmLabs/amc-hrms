@@ -1,6 +1,19 @@
 <template>
 	<div class="flex flex-col w-full gap-5" v-if="summary.data">
-		<div class="text-lg text-gray-800 font-bold">{{ __("Expense Claim Summary") }}</div>
+		<div class="flex flex-row justify-between items-center">
+			<div class="text-lg text-gray-800 font-bold">{{ __("Expenses") }}</div>
+			<router-link
+				:to="{ name: 'ExpenseClaimListView' }"
+				v-slot="{ navigate }"
+			>
+				<div
+					@click="navigate"
+					class="text-sm text-gray-800 font-semibold cursor-pointer underline underline-offset-2"
+				>
+					{{ __("View Expense History") }}
+				</div>
+			</router-link>
+		</div>
 		<div
 			class="flex flex-col gap-4 bg-white py-3 px-3.5 rounded-lg border-none"
 		>
@@ -71,7 +84,9 @@
 
 <script setup>
 import { FeatherIcon } from "frappe-ui"
-import { computed } from "vue"
+import { computed, inject } from "vue"
+
+const __ = inject("$translate")
 
 import { expenseClaimSummary as summary } from "@/data/claims"
 
