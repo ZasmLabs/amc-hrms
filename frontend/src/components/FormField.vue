@@ -104,9 +104,9 @@
 				@click="!isReadOnly && setRating(star)"
 			>
 				<FeatherIcon
-					:name="star <= (modelValue || 0) ? 'star' : 'star'"
+					name="star"
 					class="w-5 h-5"
-					:class="star <= (modelValue || 0) ? 'text-yellow-400' : 'text-gray-300'"
+					:class="star <= ratingStars ? 'text-yellow-400' : 'text-gray-300'"
 				/>
 			</button>
 		</div>
@@ -267,7 +267,12 @@ onMounted(() => {
 	setDefaultValue()
 })
 
+const ratingStars = computed(() => {
+	const val = props.modelValue || 0
+	return Math.round(val <= 1 ? val * 5 : Math.min(val, 5))
+})
+
 function setRating(star) {
-	emit("update:modelValue", star)
+	emit("update:modelValue", star / 5)
 }
 </script>

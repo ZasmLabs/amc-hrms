@@ -45,8 +45,8 @@
 
 <script setup>
 import { IonActionSheet, modalController } from "@ionic/vue"
-import { computed, ref, onMounted, inject } from "vue"
-import { FeatherIcon } from "frappe-ui"
+import { ref, onMounted, inject } from "vue"
+import { FeatherIcon, createResource, toast } from "frappe-ui"
 
 const props = defineProps({
 	doc: {
@@ -70,6 +70,8 @@ let showActionSheet = ref(false)
 let actions = ref([])
 
 const __ = inject("$translate")
+const employee = inject("$employee")
+const dayjs = inject("$dayjs")
 
 const getTransitions = async () => {
 	const transitions = await props.workflow.getTransitions(props.doc)
@@ -120,9 +122,43 @@ const showTransitions = () => {
 	showActionSheet.value = true
 }
 
+const checkTechnicianCheckin = async (action) => {
+	const serviceCallActions = ["Accept Call", "Reject Call"]
+	if (props.doc?.doctype !== "Service Call" || !serviceCallActions.includes(action)) {
+		return
+	}
+
+	const employeeName = employee?.data?.name
+	if (!employeeName) return
+
+	const today = dayjs().format("YYYY-MM-DD")
+	const checkinCount = createResource({
+		url: "frappe.client.get_count",
+		params: {
+			doctype: "Employee Checkin",
+			filters: {
+				employee: employeeName,
+				time: [">=", `${today} 00:00:00`],
+			},
+		},
+	})
+
+	const count = await checkinCount.reload()
+	if (!count) {
+		toast({
+			title: __("Attendance Reminder"),
+			text: __("Please mark your checkin for Today"),
+			icon: "alert-circle",
+			position: "bottom-center",
+			iconClasses: "text-yellow-500",
+		})
+	}
+}
+
 const applyWorkflow = async ({ event = "", workflowAction = "" }) => {
 	const action = workflowAction || event.detail.data?.action
 	if (action) {
+		await checkTechnicianCheckin(action)
 		await props.workflow.applyWorkflow(props.doc, action)
 		modalController.dismiss()
 		emit("workflow-applied")
