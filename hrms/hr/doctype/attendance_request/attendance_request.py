@@ -25,6 +25,49 @@ class AttendanceRequest(Document):
 		self.validate_request_overlap()
 		self.validate_no_attendance_to_create()
 
+	def after_insert(self):
+		self.notify_approver()
+
+	def notify_approver(self):
+		"""Notify the employee's leave approver about a new Attendance Request."""
+		from_user = frappe.db.get_value("Employee", self.employee, "user_id", cache=True)
+		to_user = frappe.db.get_value("Employee", self.employee, "leave_approver", cache=True)
+
+		if not to_user or from_user == to_user:
+			return
+
+		notification = frappe.new_doc("PWA Notification")
+		notification.from_user = from_user
+		notification.to_user = to_user
+		notification.message = (
+			f"{frappe.bold(self.employee_name)} raised a new"
+			f" {frappe.bold('Attendance Request')} for approval: {self.name}"
+		)
+		notification.reference_document_type = self.doctype
+		notification.reference_document_name = self.name
+		notification.insert(ignore_permissions=True)
+
+	def notify_employee_on_submit(self):
+		"""Notify the employee when their Attendance Request is submitted."""
+		submitter = frappe.session.user
+		employee_user = frappe.db.get_value("Employee", self.employee, "user_id", cache=True)
+
+		if not employee_user or submitter == employee_user:
+			return
+
+		submitter_name = frappe.db.get_value("User", submitter, "full_name", cache=True)
+
+		notification = frappe.new_doc("PWA Notification")
+		notification.from_user = submitter
+		notification.to_user = employee_user
+		notification.message = (
+			f"{frappe.bold('Your')} {frappe.bold('Attendance Request')}"
+			f" {self.name} has been submitted by {frappe.bold(submitter_name)}"
+		)
+		notification.reference_document_type = self.doctype
+		notification.reference_document_name = self.name
+		notification.insert(ignore_permissions=True)
+
 	def validate_half_day(self):
 		if self.half_day:
 			if not getdate(self.from_date) <= getdate(self.half_day_date) <= getdate(self.to_date):
@@ -73,6 +116,7 @@ class AttendanceRequest(Document):
 
 	def on_submit(self):
 		self.create_attendance_records()
+		self.notify_employee_on_submit()
 
 	def on_cancel(self):
 		attendance_list = frappe.get_all(
