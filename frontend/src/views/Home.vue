@@ -26,14 +26,9 @@ const __ = inject("$translate")
 
 const quickLinks = [
 	{
-		icon: markRaw(AttendanceIcon),
-		title: __("Mark Attendance"),
-		route: "AttendanceRequestFormView",
-	},
-	{
-		icon: markRaw(LeaveIcon),
-		title: __("Apply Leave"),
-		route: "LeaveApplicationFormView",
+		icon: markRaw(ServiceCallIcon),
+		title: __("Service Call"),
+		route: "ServiceCallMyAssignmentsView",
 	},
 	{
 		icon: markRaw(ExpenseIcon),
@@ -41,9 +36,14 @@ const quickLinks = [
 		route: "ExpenseClaimFormView",
 	},
 	{
-		icon: markRaw(ServiceCallIcon),
-		title: __("Service Call"),
-		route: "ServiceCallMyAssignmentsView",
+		icon: markRaw(LeaveIcon),
+		title: __("Apply Leave"),
+		route: "LeaveApplicationFormView",
+	},
+	{
+		icon: markRaw(AttendanceIcon),
+		title: __("Mark Attendance"),
+		route: "AttendanceRequestFormView",
 	},
 ]
 </script>

@@ -523,10 +523,11 @@ function getFilteredFields(fields) {
 	// For existing documents:
 	if (hasTechnicianRole) {
 		// Technician role:
-		// - In "Assigned" state: show only 9 basic fields (no technician_list, no service_branch, no service details)
+		// - In "Assigned" and "Accepted" states: show only 9 basic fields
+		//   (no technician_list, no service_branch, no service details)
 		// - After "Accept Call" (any other state): show ALL fields EXCEPT technician_list and service_branch
 		// - Technician List and Company Branch should NEVER be visible to Technician at any stage
-		if (currentState === "Assigned") {
+		if (currentState === "Assigned" || currentState === "Accepted") {
 			const technicianBasicFields = [
 				"date",
 				"customer",
