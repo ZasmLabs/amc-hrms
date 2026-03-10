@@ -50,6 +50,7 @@ class ExpenseClaim(AccountsController, PWANotificationsMixin):
 	def validate(self):
 		validate_active_employee(self.employee)
 		set_employee_name(self)
+		self.validate_employee_expense_approver()
 		self.validate_sanctioned_amount()
 		self.calculate_total_amount()
 		self.validate_advances()
@@ -114,6 +115,46 @@ class ExpenseClaim(AccountsController, PWANotificationsMixin):
 		):
 			frappe.throw(_("Self-approval for Expense Claims is not allowed"))
 
+	def validate_employee_expense_approver(self):
+		employee_approver, employee_name = frappe.db.get_value(
+			"Employee", self.employee, ["expense_approver", "employee_name"]
+		)
+		employee_label = employee_name or self.employee_name or self.employee
+
+		if not employee_approver:
+			frappe.throw(
+				_("Please set the Expense Approver for the {0}").format(employee_label),
+				exc=InvalidExpenseApproverError,
+			)
+
+		if self.expense_approver and self.expense_approver != employee_approver:
+			frappe.throw(
+				_("Expense Approver must match the approver set for the {0}.").format(employee_label),
+				exc=ExpenseApproverIdentityError,
+			)
+
+		# Keep approver synced with employee master so only the mapped approver can be used.
+		self.expense_approver = employee_approver
+
+	def validate_submitter_is_expense_approver(self):
+		"""Allow submit only by selected expense approver."""
+		if frappe.session.user == "Administrator":
+			return
+
+		if not self.expense_approver:
+			frappe.throw(
+				_("Expense Approver is mandatory before submitting an Expense Claim."),
+				exc=InvalidExpenseApproverError,
+			)
+
+		if self.expense_approver != frappe.session.user:
+			frappe.throw(
+				_("Only the selected Expense Approver ({0}) can submit this Expense Claim.").format(
+					self.expense_approver
+				),
+				exc=ExpenseApproverIdentityError,
+			)
+
 	def on_update(self):
 		share_doc_with_approver(self, self.expense_approver)
 		self.publish_update()
@@ -127,6 +168,7 @@ class ExpenseClaim(AccountsController, PWANotificationsMixin):
 			frappe.throw(_("Payable Account is mandatory to submit an Expense Claim"))
 
 		self.validate_for_self_approval()
+		self.validate_submitter_is_expense_approver()
 
 	def publish_update(self):
 		employee_user = frappe.db.get_value("Employee", self.employee, "user_id", cache=True)

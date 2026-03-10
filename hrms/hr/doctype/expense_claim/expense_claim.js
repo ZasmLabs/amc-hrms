@@ -18,11 +18,17 @@ frappe.ui.form.on("Expense Claim", {
 		});
 
 		frm.set_query("expense_approver", function () {
+			if (!frm.employee_expense_approver) {
+				return {
+					filters: {
+						name: ["=", ""],
+					},
+				};
+			}
+
 			return {
-				query: "hrms.hr.doctype.department_approver.department_approver.get_approvers",
 				filters: {
-					employee: frm.doc.employee,
-					doctype: frm.doc.doctype,
+					name: frm.employee_expense_approver,
 				},
 			};
 		});
@@ -76,6 +82,9 @@ frappe.ui.form.on("Expense Claim", {
 
 	onload: function (frm) {
 		erpnext.accounts.dimensions.setup_dimension_filters(frm, frm.doctype);
+		if (frm.doc.employee) {
+			frm.trigger("set_expense_approver_from_employee");
+		}
 
 		if (frm.doc.docstatus == 0) {
 			return frappe.call({
@@ -265,7 +274,36 @@ frappe.ui.form.on("Expense Claim", {
 	},
 
 	employee: function (frm) {
+		frm.trigger("set_expense_approver_from_employee");
 		frm.events.get_advances(frm);
+	},
+
+	set_expense_approver_from_employee: function (frm) {
+		if (!frm.doc.employee) {
+			frm.employee_expense_approver = null;
+			frm.set_value("expense_approver", "");
+			return;
+		}
+
+		return frappe.db
+			.get_value("Employee", frm.doc.employee, ["expense_approver", "employee_name"])
+			.then(({ message }) => {
+				const employee_name = message?.employee_name || frm.doc.employee_name || frm.doc.employee;
+				const mapped_approver = message?.expense_approver || null;
+				frm.employee_expense_approver = mapped_approver;
+
+				if (!mapped_approver) {
+					frm.set_value("expense_approver", "");
+					frappe.msgprint(
+						__("Please set the Expense Approver for the {0}", [employee_name]),
+					);
+					return;
+				}
+
+				if (frm.doc.expense_approver !== mapped_approver) {
+					frm.set_value("expense_approver", mapped_approver);
+				}
+			});
 	},
 
 	cost_center: function (frm) {

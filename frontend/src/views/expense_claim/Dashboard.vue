@@ -18,9 +18,16 @@
 				</div>
 
 				<TabButtons
+					v-if="showTeamTabs"
 					:buttons="TAB_BUTTONS"
 					v-model="activeTab"
 				/>
+				<div
+					v-else
+					class="text-base font-semibold text-gray-800"
+				>
+					{{ __("My Expenses") }}
+				</div>
 
 				<div v-if="isLoading" class="flex items-center justify-center py-8">
 					<LoadingIndicator class="w-8 h-8 text-gray-800" />
@@ -81,6 +88,7 @@ const isServiceManager = computed(() => {
 	const roles = Array.isArray(userResource.data?.roles) ? userResource.data.roles : []
 	return roles.includes("Service Manager") || roles.includes("System Manager")
 })
+const showTeamTabs = computed(() => isServiceManager.value)
 
 const teamExpenses = createResource({
 	url: "frappe.client.get_list",
@@ -113,15 +121,15 @@ watch(isTeamTab, (val) => {
 })
 
 const isLoading = computed(() => {
-	if (isTeamTab.value && isServiceManager.value) {
+	if (showTeamTabs.value && isTeamTab.value) {
 		return teamExpenses.loading
 	}
 	return false
 })
 
 const activeItems = computed(() => {
-	if (isTeamTab.value) {
-		return isServiceManager.value ? teamExpenses.data : []
+	if (showTeamTabs.value && isTeamTab.value) {
+		return teamExpenses.data
 	}
 	return myClaims.data
 })
