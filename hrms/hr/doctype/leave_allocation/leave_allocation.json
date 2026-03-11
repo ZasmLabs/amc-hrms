@@ -10,7 +10,6 @@
   "naming_series",
   "employee",
   "employee_name",
-  "department",
   "company",
   "column_break1",
   "leave_type",
@@ -29,9 +28,7 @@
   "leave_policy_assignment",
   "carry_forwarded_leaves_count",
   "expired",
-  "amended_from",
-  "notes",
-  "description"
+  "amended_from"
  ],
  "fields": [
   {
@@ -66,14 +63,6 @@
    "label": "Employee Name",
    "read_only": 1,
    "search_index": 1
-  },
-  {
-   "fetch_from": "employee.department",
-   "fieldname": "department",
-   "fieldtype": "Link",
-   "label": "Department",
-   "options": "Department",
-   "read_only": 1
   },
   {
    "fieldname": "column_break1",
@@ -193,20 +182,6 @@
    "options": "Leave Allocation",
    "print_hide": 1,
    "read_only": 1
-  },
-  {
-   "collapsible": 1,
-   "fieldname": "notes",
-   "fieldtype": "Section Break",
-   "label": "Notes"
-  },
-  {
-   "fieldname": "description",
-   "fieldtype": "Small Text",
-   "label": "Description",
-   "oldfieldname": "reason",
-   "oldfieldtype": "Small Text",
-   "width": "300px"
   },
   {
    "depends_on": "carry_forwarded_leaves_count",

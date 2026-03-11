@@ -5,7 +5,7 @@
 import frappe
 from frappe import _
 from frappe.model.document import Document
-from frappe.utils import cint, get_datetime
+from frappe.utils import get_datetime
 
 from hrms.hr.doctype.shift_assignment.shift_assignment import get_actual_start_end_datetime_of_shift
 from hrms.hr.utils import (
@@ -75,7 +75,6 @@ class EmployeeCheckin(Document):
 			shift_actual_timings.shift_type.determine_check_in_and_check_out
 			== "Strictly based on Log Type in Employee Checkin"
 			and not self.log_type
-			and not self.skip_auto_attendance
 		):
 			frappe.throw(
 				_("Log Type is required for check-ins falling in the shift: {0}.").format(
@@ -142,9 +141,7 @@ def add_log_based_on_employee_field(
 
 	:param employee_field_value: The value to look for in employee field.
 	:param timestamp: The timestamp of the Log. Currently expected in the following format as string: '2019-05-08 10:48:08.000000'
-	:param device_id: (optional)Location / Device ID. A short string is expected.
 	:param log_type: (optional)Direction of the Punch if available (IN/OUT).
-	:param skip_auto_attendance: (optional)Skip auto attendance field will be set for this log(0/1).
 	:param employee_fieldname: (Default: attendance_device_id)Name of the field in Employee DocType based on which employee lookup will happen.
 	:latitude: (optional) Latitude of the shift location.
 	:longitude: (optional) Longitude of the shift location.
@@ -172,12 +169,9 @@ def add_log_based_on_employee_field(
 	doc.employee = employee.name
 	doc.employee_name = employee.employee_name
 	doc.time = timestamp
-	doc.device_id = device_id
 	doc.log_type = log_type
 	doc.latitude = latitude
 	doc.longitude = longitude
-	if cint(skip_auto_attendance) == 1:
-		doc.skip_auto_attendance = "1"
 	doc.insert()
 
 	return doc
@@ -382,12 +376,8 @@ def add_comment_in_checkins(log_names: list, error_message: str):
 
 
 def skip_attendance_in_checkins(log_names: list):
-	EmployeeCheckin = frappe.qb.DocType("Employee Checkin")
-	(
-		frappe.qb.update(EmployeeCheckin)
-		.set("skip_auto_attendance", 1)
-		.where(EmployeeCheckin.name.isin(log_names))
-	).run()
+	# Retained for compatibility with existing callers after removing skip_auto_attendance.
+	return
 
 
 def update_attendance_in_checkins(log_names: list, attendance_id: str):
@@ -453,7 +443,6 @@ def auto_checkout_employees():
 			checkout.employee_name = employee.employee_name
 			checkout.log_type = "OUT"
 			checkout.time = auto_checkout_time
-			checkout.device_id = "AUTO_CHECKOUT"
 			checkout.flags.ignore_validate = True  # Skip validations for auto-generated record
 			checkout.insert(ignore_permissions=True)
 			

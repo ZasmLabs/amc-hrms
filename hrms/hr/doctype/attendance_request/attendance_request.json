@@ -10,7 +10,6 @@
  "field_order": [
   "employee",
   "employee_name",
-  "department",
   "company",
   "column_break_5",
   "from_date",
@@ -39,14 +38,6 @@
    "fieldname": "employee_name",
    "fieldtype": "Data",
    "label": "Employee Name",
-   "read_only": 1
-  },
-  {
-   "fetch_from": "employee.department",
-   "fieldname": "department",
-   "fieldtype": "Link",
-   "label": "Department",
-   "options": "Department",
    "read_only": 1
   },
   {

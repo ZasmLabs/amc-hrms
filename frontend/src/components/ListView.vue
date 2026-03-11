@@ -13,6 +13,7 @@
 
 				<div class="flex flex-row gap-2">
 					<Button
+						v-if="props.showFilterButton"
 						id="show-filter-modal"
 						icon="filter"
 						variant="subtle"
@@ -67,7 +68,7 @@
 						:key="link.name"
 					>
 						<component
-							v-if="props.doctype === 'Employee Checkin'"
+							v-if="props.doctype === 'Employee Checkin' || props.doctype === 'Attendance'"
 							:is="listItemComponent[doctype]"
 							:doc="link"
 							:isTeamRequest="isTeamRequest"
@@ -101,7 +102,7 @@
 			</div>
 		</div>
 
-		<CustomIonModal trigger="show-filter-modal">
+		<CustomIonModal v-if="props.showFilterButton" trigger="show-filter-modal">
 			<!-- Filter Action Sheet -->
 			<template #actionSheet>
 				<ListFiltersActionSheet
@@ -122,7 +123,7 @@
 		:breakpoints="[0, 1]"
 	>
 		<RequestActionSheet
-			:fields="EMPLOYEE_CHECKIN_FIELDS"
+			:fields="summaryFieldsMap[props.doctype]"
 			:showOpenForm="false"
 			v-model="selectedRequest"
 		/>
@@ -145,6 +146,7 @@ import { FeatherIcon, createResource, LoadingIndicator, debounce } from "frappe-
 
 import TabButtons from "@/components/TabButtons.vue"
 import EmployeeCheckinItem from "@/components/EmployeeCheckinItem.vue"
+import AttendanceItem from "@/components/AttendanceItem.vue"
 import AttendanceRequestItem from "@/components/AttendanceRequestItem.vue"
 import ShiftRequestItem from "@/components/ShiftRequestItem.vue"
 import ShiftAssignmentItem from "@/components/ShiftAssignmentItem.vue"
@@ -155,7 +157,7 @@ import ServiceCallItem from "@/components/ServiceCallItem.vue"
 import ListFiltersActionSheet from "@/components/ListFiltersActionSheet.vue"
 import CustomIonModal from "@/components/CustomIonModal.vue"
 import RequestActionSheet from "@/components/RequestActionSheet.vue"
-import { EMPLOYEE_CHECKIN_FIELDS } from "@/data/config/requestSummaryFields"
+import { EMPLOYEE_CHECKIN_FIELDS, ATTENDANCE_FIELDS } from "@/data/config/requestSummaryFields"
 
 import useWorkflow from "@/composables/workflow"
 import { useListUpdate } from "@/composables/realtime"
@@ -178,9 +180,19 @@ const props = defineProps({
 		type: Array,
 		required: true,
 	},
+	showFilterButton: {
+		type: Boolean,
+		required: false,
+		default: true,
+	},
 	tabButtons: {
 		type: Array,
 		required: false,
+	},
+	serviceManagerTeamScope: {
+		type: Boolean,
+		required: false,
+		default: false,
 	},
 	pageTitle: {
 		type: String,
@@ -192,6 +204,7 @@ const getButtonKey = (tab) => tab?.key ?? tab
 
 const listItemComponent = {
 	"Employee Checkin": markRaw(EmployeeCheckinItem),
+	Attendance: markRaw(AttendanceItem),
 	"Attendance Request": markRaw(AttendanceRequestItem),
 	"Shift Request": markRaw(ShiftRequestItem),
 	"Shift Assignment": markRaw(ShiftAssignmentItem),
@@ -205,6 +218,7 @@ const router = useRouter()
 const dayjs = inject("$dayjs")
 const socket = inject("$socket")
 const employee = inject("$employee")
+const user = inject("$user")
 const filterMap = reactive({})
 const activeTab = ref(props.tabButtons ? getButtonKey(props.tabButtons[0]) : undefined)
 const areFiltersApplied = ref(false)
@@ -242,6 +256,16 @@ const defaultFilters = computed(() => {
 
 	// Service Call doesn't have employee field, skip default filtering
 	if (props.doctype === "Service Call") {
+		return filters
+	}
+
+	if (props.serviceManagerTeamScope) {
+		const roles = Array.isArray(user?.data?.roles) ? user.data.roles : []
+		if (roles.includes("Service Manager")) {
+			filters.push([props.doctype, "employee", "!=", employee.data.name])
+		} else {
+			filters.push([props.doctype, "employee", "=", employee.data.name])
+		}
 		return filters
 	}
 
@@ -297,6 +321,12 @@ const createPermission = createResource({
 
 // helper functions
 const openRequestModal = async (request) => {
+	if (props.doctype === "Attendance") {
+		selectedRequest.value = { ...request, doctype: "Attendance" }
+		isRequestModalOpen.value = true
+		return
+	}
+
 	selectedRequest.value = request
 	selectedRequest.value.doctype = "Employee Checkin"
 	selectedRequest.value.date = request.time
@@ -304,6 +334,11 @@ const openRequestModal = async (request) => {
 	selectedRequest.value.formatted_latitude = `${Number(request.latitude).toFixed(5)}°`
 	selectedRequest.value.formatted_longitude = `${Number(request.longitude).toFixed(5)}°`
 	isRequestModalOpen.value = true
+}
+
+const summaryFieldsMap = {
+	"Employee Checkin": EMPLOYEE_CHECKIN_FIELDS,
+	Attendance: ATTENDANCE_FIELDS,
 }
 
 const closeRequestModal = async () => {

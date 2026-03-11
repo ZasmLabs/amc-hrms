@@ -76,13 +76,17 @@ frappe.ui.form.on("Leave Application", {
 			);
 			frm.dashboard.show();
 
-			let allowed_leave_types = Object.keys(leave_details);
+			let allowed_leave_types = leave_details ? Object.keys(leave_details) : [];
 			// lwps should be allowed for selection as they don't have any allocation
-			allowed_leave_types = allowed_leave_types.concat(lwps);
+			allowed_leave_types = allowed_leave_types.concat(lwps || []);
 
 			frm.set_query("leave_type", function () {
+				if (!allowed_leave_types.length) {
+					// Fallback: allow selecting from all readable Leave Types.
+					return {};
+				}
 				return {
-					filters: [["leave_type_name", "in", allowed_leave_types]],
+					filters: [["name", "in", allowed_leave_types]],
 				};
 			});
 		}

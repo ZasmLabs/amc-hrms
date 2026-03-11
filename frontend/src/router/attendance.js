@@ -1,5 +1,10 @@
 const routes = [
 	{
+		name: "AttendanceHistoryListView",
+		path: "/attendance-history",
+		component: () => import("@/views/attendance/AttendanceHistoryList.vue"),
+	},
+	{
 		name: "AttendanceRequestListView",
 		path: "/attendance-requests",
 		component: () => import("@/views/attendance/AttendanceRequestList.vue"),

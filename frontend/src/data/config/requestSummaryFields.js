@@ -254,3 +254,31 @@ export const EMPLOYEE_CHECKIN_FIELDS = [
 		fieldtype: "geolocation",
 	},
 ]
+
+export const ATTENDANCE_FIELDS = [
+	{
+		fieldname: "name",
+		label: "ID",
+		fieldtype: "Data",
+	},
+	{
+		fieldname: "attendance_date",
+		label: "Attendance Date",
+		fieldtype: "Date",
+	},
+	{
+		fieldname: "status",
+		label: "Status",
+		fieldtype: "Select",
+	},
+	{
+		fieldname: "shift",
+		label: "Shift",
+		fieldtype: "Link",
+	},
+	{
+		fieldname: "employee",
+		label: "Employee",
+		fieldtype: "Link",
+	},
+]

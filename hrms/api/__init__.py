@@ -362,6 +362,7 @@ def get_leave_applications(
 	filters = get_filters("Leave Application", employee, approver_id, for_approval)
 	fields = [
 		"name",
+		"docstatus",
 		"posting_date",
 		"employee",
 		"employee_name",

@@ -151,14 +151,15 @@ function getFilteredFields(fields) {
 		"sb_other_details",
 		"salary_slip",
 		"letter_head",
+		"department",
+		"follow_via_email",
+		"color",
 	]
 
 	const employeeFields = [
 		"employee",
 		"employee_name",
-		"department",
 		"company",
-		"follow_via_email",
 		"status",
 		"posting_date",
 	]

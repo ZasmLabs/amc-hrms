@@ -12,8 +12,6 @@
   "shift",
   "column_break_4",
   "time",
-  "device_id",
-  "skip_auto_attendance",
   "attendance",
   "location_section",
   "latitude",
@@ -76,17 +74,6 @@
    "permlevel": 1,
    "read_only_depends_on": "eval:doc.attendance;",
    "reqd": 1
-  },
-  {
-   "fieldname": "device_id",
-   "fieldtype": "Data",
-   "label": "Location / Device ID"
-  },
-  {
-   "default": "0",
-   "fieldname": "skip_auto_attendance",
-   "fieldtype": "Check",
-   "label": "Skip Auto Attendance"
   },
   {
    "fieldname": "attendance",
