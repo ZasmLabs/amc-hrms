@@ -232,9 +232,12 @@ const scrollContainer = ref(null)
 const hasNextPage = ref(true)
 const listOptions = ref({
 	doctype: props.doctype,
-	fields: props.fields,
+	fields: [...props.fields],
 	group_by: props.groupBy,
-	order_by: `\`tab${props.doctype}\`.modified desc`,
+	order_by:
+		props.doctype === "Employee Checkin"
+			? `\`tab${props.doctype}\`.time desc`
+			: `\`tab${props.doctype}\`.modified desc`,
 	page_length: 50,
 })
 
@@ -329,8 +332,12 @@ const openRequestModal = async (request) => {
 
 	selectedRequest.value = request
 	selectedRequest.value.doctype = "Employee Checkin"
-	selectedRequest.value.date = request.time
-	selectedRequest.value.formatted_time = dayjs(request.time).format("HH:mm a")
+	const checkinTimestamp = request.time || request.creation
+	const parsedCheckinTime = dayjs(checkinTimestamp)
+	selectedRequest.value.date = checkinTimestamp
+	selectedRequest.value.formatted_time = parsedCheckinTime.isValid()
+		? parsedCheckinTime.format("HH:mm a")
+		: "--"
 	selectedRequest.value.formatted_latitude = `${Number(request.latitude).toFixed(5)}°`
 	selectedRequest.value.formatted_longitude = `${Number(request.longitude).toFixed(5)}°`
 	isRequestModalOpen.value = true
@@ -399,7 +406,7 @@ function fetchDocumentList(start = 0) {
 
 	if (appliedFilters.value) filters.push(...appliedFilters.value)
 
-	if (workflowStateField.value) {
+	if (workflowStateField.value && !listOptions.value.fields.includes(workflowStateField.value)) {
 		listOptions.value.fields.push(workflowStateField.value)
 	}
 

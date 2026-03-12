@@ -6,7 +6,9 @@
 
 		<template v-if="settings.data?.allow_employee_checkin_from_mobile_app">
 			<div class="font-medium text-sm text-gray-500 mt-1.5" v-if="lastLog">
-				<span>{{ __("Last {0} was at {1}", [__(lastLogType), formatTimestamp(lastLog.time)]) }}</span>
+				<span>
+					{{ __("Last {0} was at {1}", [__(lastLogType), formatTimestamp(lastLog.time || lastLog.creation)]) }}
+				</span>
 				<span class="whitespace-pre"> &middot; </span>
 				<router-link :to="{ name: 'EmployeeCheckinListView' }" v-slot="{ navigate }">
 					<span @click="navigate" class="underline">View List</span>
@@ -38,6 +40,7 @@
 		trigger="open-checkin-modal"
 		:initial-breakpoint="1"
 		:breakpoints="[0, 1]"
+		@didDismiss="onModalDismiss"
 	>
 		<div class="h-120 w-full flex flex-col items-center justify-center gap-5 p-4 mb-5">
 			<div class="flex flex-col gap-1.5 mt-2 items-center justify-center">
@@ -54,7 +57,10 @@
 					{{ locationStatus }}
 				</span>
 
-				<div class="rounded border-4 translate-z-0 block overflow-hidden w-full h-170">
+				<div
+					v-if="latitude !== null && longitude !== null"
+					class="rounded border-4 translate-z-0 block overflow-hidden w-full h-170"
+				>
 					<iframe
 						width="100%"
 						height="170"
@@ -69,8 +75,13 @@
 				</div>
 			</template>
 
-			<Button :loading="checkins.insert.loading" variant="solid" class="w-full py-5 text-sm disabled:bg-gray-700" @click="submitLog(nextAction.action)">
-				{{ __("Confirm {0}", [nextAction.label]) }}
+			<Button
+				:loading="checkins.insert.loading || isSubmitting"
+				variant="solid"
+				class="w-full py-5 text-sm disabled:bg-gray-700"
+				@click="submitLog"
+			>
+				{{ __("Confirm {0}", [selectedAction.label]) }}
 			</Button>
 		</div>
 	</ion-modal>
@@ -78,7 +89,7 @@
 
 <script setup>
 import { createResource, createListResource, toast, FeatherIcon } from "frappe-ui"
-import { computed, inject, ref, onMounted, onBeforeUnmount } from "vue"
+import { computed, inject, ref, onMounted, onBeforeUnmount, watch } from "vue"
 import { IonModal, modalController } from "@ionic/vue"
 
 import { formatTimestamp } from "@/utils/formatters"
@@ -90,9 +101,12 @@ const employee = inject("$employee")
 const dayjs = inject("$dayjs")
 const __ = inject("$translate")
 const checkinTimestamp = ref(null)
-const latitude = ref(0)
-const longitude = ref(0)
+const latitude = ref(null)
+const longitude = ref(null)
 const locationStatus = ref("")
+const isSubmitting = ref(false)
+const selectedAction = ref({ action: "IN", label: __("Check In") })
+const optimisticLastLog = ref(null)
 const settings = createResource({
 	url: "hrms.api.get_hr_settings",
 	auto: true,
@@ -100,17 +114,21 @@ const settings = createResource({
 
 const checkins = createListResource({
 	doctype: DOCTYPE,
-	fields: ["name", "employee", "employee_name", "log_type", "time", "device_id"],
-	filters: {
-		employee: employee.data.name,
-	},
+	fields: ["name", "employee", "employee_name", "log_type", "time", "creation", "device_id"],
+	filters: {},
 	orderBy: "time desc",
 })
-checkins.reload()
+
+const reloadCheckins = () => {
+	const employeeName = employee?.data?.name
+	if (!employeeName) return
+	checkins.filters.employee = employeeName
+	return checkins.reload()
+}
 
 const lastLog = computed(() => {
-	if (checkins.list.loading || !checkins.data) return {}
-	return checkins.data[0]
+	if (optimisticLastLog.value) return optimisticLastLog.value
+	return checkins.data?.[0] || null
 })
 
 const lastLogType = computed(() => {
@@ -149,25 +167,70 @@ const fetchLocation = () => {
 
 const handleEmployeeCheckin = () => {
 	checkinTimestamp.value = dayjs().format("YYYY-MM-DD HH:mm:ss")
+	selectedAction.value = { ...nextAction.value }
+	latitude.value = null
+	longitude.value = null
+	locationStatus.value = ""
 
 	if (settings.data?.allow_geolocation_tracking) {
 		fetchLocation()
 	}
 }
 
-const submitLog = (logType) => {
+const onModalDismiss = () => {
+	isSubmitting.value = false
+	locationStatus.value = ""
+	latitude.value = null
+	longitude.value = null
+}
+
+const submitLog = () => {
+	if (isSubmitting.value || checkins.insert.loading) return
+
+	if (!employee?.data?.name) {
+		toast({
+			title: __("Error"),
+			text: __("Employee not loaded. Please try again."),
+			icon: "alert-circle",
+			position: "bottom-center",
+			iconClasses: "text-red-500",
+		})
+		return
+	}
+
+	if (settings.data?.allow_geolocation_tracking && !(latitude.value || longitude.value)) {
+		toast({
+			title: __("Location Required"),
+			text: __("Please wait for location to be detected before confirming."),
+			icon: "alert-circle",
+			position: "bottom-center",
+			iconClasses: "text-red-500",
+		})
+		return
+	}
+
+	isSubmitting.value = true
+	const logType = selectedAction.value.action
 	const actionLabel = logType === "IN" ? __("Check-in") : __("Check-out")
+	const submitTimestamp = dayjs().format("YYYY-MM-DD HH:mm:ss")
 
 	checkins.insert.submit(
 		{
 			employee: employee.data.name,
 			log_type: logType,
-			time: checkinTimestamp.value,
+			time: submitTimestamp,
 			latitude: latitude.value,
 			longitude: longitude.value,
 		},
 		{
 			onSuccess() {
+				optimisticLastLog.value = {
+					log_type: logType,
+					time: submitTimestamp,
+					creation: submitTimestamp,
+				}
+				isSubmitting.value = false
+				reloadCheckins()
 				modalController.dismiss()
 				toast({
 					title: __("Success"),
@@ -178,6 +241,7 @@ const submitLog = (logType) => {
 				})
 			},
 			onError(error) {
+				isSubmitting.value = false
 				let messages = error.messages || []
 
 				for (const message of messages) {
@@ -195,11 +259,11 @@ const submitLog = (logType) => {
 }
 
 onMounted(() => {
+	reloadCheckins()
+
 	socket.emit("doctype_subscribe", DOCTYPE)
 	socket.on("list_update", (data) => {
-		if (data.doctype == DOCTYPE) {
-			checkins.reload()
-		}
+		if (data.doctype == DOCTYPE) reloadCheckins()
 	})
 })
 
@@ -207,4 +271,21 @@ onBeforeUnmount(() => {
 	socket.emit("doctype_unsubscribe", DOCTYPE)
 	socket.off("list_update")
 })
+
+watch(
+	() => employee?.data?.name,
+	(name) => {
+		if (name) reloadCheckins()
+	},
+	{ immediate: true }
+)
+
+watch(
+	() => checkins.data,
+	(data) => {
+		if (optimisticLastLog.value && Array.isArray(data) && data.length) {
+			optimisticLastLog.value = null
+		}
+	}
+)
 </script>

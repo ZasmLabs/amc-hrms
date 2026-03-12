@@ -5,7 +5,7 @@
 			<div class="flex flex-col items-start gap-1.5">
 				<div class="text-base font-normal text-gray-800">Log Type: {{ props.doc.log_type }}</div>
 				<div class="text-xs font-normal text-gray-500">
-					<span>{{ formatTimestamp(props.doc.time) }}</span>
+					<span>{{ formatTimestamp(props.doc.time || props.doc.creation) }}</span>
 				</div>
 			</div>
 		</template>

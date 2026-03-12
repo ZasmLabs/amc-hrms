@@ -33,12 +33,17 @@ export const formatCurrency = (value, currency) => {
 }
 
 export const formatTimestamp = (timestamp) => {
-	const formattedTime = dayjs(timestamp).format("hh:mm a")
+	if (!timestamp) return "--"
 
-	if (dayjs(timestamp).isToday()) return formattedTime
-	else if (dayjs(timestamp).isYesterday()) return `${formattedTime} yesterday`
-	else if (dayjs(timestamp).isSame(dayjs(), "year"))
-		return `${formattedTime} on ${dayjs(timestamp).format("D MMM")}`
+	const parsedTimestamp = dayjs(timestamp)
+	if (!parsedTimestamp.isValid()) return "--"
 
-	return `${formattedTime} on ${dayjs(timestamp).format("D MMM, YYYY")}`
+	const formattedTime = parsedTimestamp.format("hh:mm a")
+
+	if (parsedTimestamp.isToday()) return formattedTime
+	else if (parsedTimestamp.isYesterday()) return `${formattedTime} yesterday`
+	else if (parsedTimestamp.isSame(dayjs(), "year"))
+		return `${formattedTime} on ${parsedTimestamp.format("D MMM")}`
+
+	return `${formattedTime} on ${parsedTimestamp.format("D MMM, YYYY")}`
 }
