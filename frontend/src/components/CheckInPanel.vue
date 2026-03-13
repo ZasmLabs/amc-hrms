@@ -107,6 +107,7 @@ const locationStatus = ref("")
 const isSubmitting = ref(false)
 const selectedAction = ref({ action: "IN", label: __("Check In") })
 const optimisticLastLog = ref(null)
+const serverLastLog = ref(null)
 const settings = createResource({
 	url: "hrms.api.get_hr_settings",
 	auto: true,
@@ -119,16 +120,44 @@ const checkins = createListResource({
 	orderBy: "time desc",
 })
 
+const latestCheckin = createResource({
+	url: "frappe.client.get_list",
+})
+
+const getActionForLastLog = (logType) => {
+	return logType === "IN"
+		? { action: "OUT", label: __("Check Out") }
+		: { action: "IN", label: __("Check In") }
+}
+
 const reloadCheckins = () => {
 	const employeeName = employee?.data?.name
 	if (!employeeName) return
 	checkins.filters.employee = employeeName
-	return checkins.reload()
+	checkins.reload()
+	return latestCheckin
+		.submit({
+			doctype: DOCTYPE,
+			fields: ["name", "log_type", "time", "creation"],
+			filters: {
+				employee: employeeName,
+				docstatus: ["!=", 2],
+			},
+			order_by: "time desc",
+			limit_page_length: 1,
+		})
+		.then((data) => {
+			serverLastLog.value = Array.isArray(data) && data.length ? data[0] : null
+			return serverLastLog.value
+		})
+		.catch(() => {
+			return serverLastLog.value
+		})
 }
 
 const lastLog = computed(() => {
 	if (optimisticLastLog.value) return optimisticLastLog.value
-	return checkins.data?.[0] || null
+	return serverLastLog.value
 })
 
 const lastLogType = computed(() => {
@@ -136,9 +165,7 @@ const lastLogType = computed(() => {
 })
 
 const nextAction = computed(() => {
-	return lastLog?.value?.log_type === "IN"
-		? { action: "OUT", label: __("Check Out") }
-		: { action: "IN", label: __("Check In") }
+	return getActionForLastLog(lastLog?.value?.log_type)
 })
 
 function handleLocationSuccess(position) {
@@ -184,7 +211,7 @@ const onModalDismiss = () => {
 	longitude.value = null
 }
 
-const submitLog = () => {
+const submitLog = async () => {
 	if (isSubmitting.value || checkins.insert.loading) return
 
 	if (!employee?.data?.name) {
@@ -210,7 +237,10 @@ const submitLog = () => {
 	}
 
 	isSubmitting.value = true
-	const logType = selectedAction.value.action
+	const latestLog = await reloadCheckins()
+	const resolvedAction = getActionForLastLog(latestLog?.log_type)
+	selectedAction.value = resolvedAction
+	const logType = resolvedAction.action
 	const actionLabel = logType === "IN" ? __("Check-in") : __("Check-out")
 	const submitTimestamp = dayjs().format("YYYY-MM-DD HH:mm:ss")
 
@@ -230,7 +260,9 @@ const submitLog = () => {
 					creation: submitTimestamp,
 				}
 				isSubmitting.value = false
-				reloadCheckins()
+				reloadCheckins().finally(() => {
+					optimisticLastLog.value = null
+				})
 				modalController.dismiss()
 				toast({
 					title: __("Success"),
@@ -278,14 +310,5 @@ watch(
 		if (name) reloadCheckins()
 	},
 	{ immediate: true }
-)
-
-watch(
-	() => checkins.data,
-	(data) => {
-		if (optimisticLastLog.value && Array.isArray(data) && data.length) {
-			optimisticLastLog.value = null
-		}
-	}
 )
 </script>
