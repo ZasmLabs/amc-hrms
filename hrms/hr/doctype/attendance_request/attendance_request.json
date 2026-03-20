@@ -106,7 +106,7 @@
    "options": "Shift Type"
   },
   {
-   "default": "0",
+   "default": "1",
    "fieldname": "include_holidays",
    "fieldtype": "Check",
    "hidden": 1,
