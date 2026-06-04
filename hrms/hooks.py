@@ -11,7 +11,7 @@ app_home = "/app/overview"
 
 add_to_apps_screen = [
 	{
-		"name": "hrms",
+		"name": "amc-hrms",
 		"logo": "/assets/hrms/images/frappe-hr-logo.svg",
 		"title": "Frappe HR",
 		"route": "/app/overview",
