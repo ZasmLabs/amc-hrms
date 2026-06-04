@@ -1,4 +1,4 @@
-app_name = "hrms"
+app_name = "amc-hrms"
 app_title = "Frappe HR"
 app_publisher = "Frappe Technologies Pvt. Ltd."
 app_description = "Modern HR and Payroll Software"
